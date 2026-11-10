@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aliado STA · Análisis de rutas de esquí de montaña y freeride</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>if(!window.L){document.write('<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>');}</script>
+<style>
+:root{
+  --ink:#0e1a2b;--ink2:#41526a;--ink3:#7a889b;--snow:#f4f6f9;--line:#dfe5ec;--card:#fff;
+  --accent:#e8590c;--ok:#2b8a3e;--okbg:#ebfbee;--warn:#e67700;--warnbg:#fff4e6;--bad:#c92a2a;--badbg:#fff5f5;--blue:#1971c2;
+  --s27:#f2e35b;--s30:#f59f00;--s35:#e03131;--s40:#9c36b5;--s45:#212a5c;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--snow);font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:Archivo,Inter,sans-serif;margin:0}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+header{height:58px;background:var(--ink);color:#fff;display:flex;align-items:center;gap:14px;padding:0 16px;position:relative;z-index:1001}
+.brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.brand svg{flex:none}
+.brand h1{font-size:18px;font-weight:800;letter-spacing:.2px}
+.brand small{display:block;font-family:Inter;font-weight:500;font-size:11px;color:#9fb0c6;letter-spacing:.3px}
+.search{position:relative;flex:1;max-width:420px;margin-left:12px}
+.search input{width:100%;height:36px;border-radius:8px;border:1px solid #2c3d55;background:#16253a;color:#fff;padding:0 12px 0 34px;outline:none}
+.search input:focus{border-color:#5c7aa3}
+.search svg{position:absolute;left:10px;top:10px;opacity:.7;z-index:1}
+.results{position:absolute;top:40px;left:0;right:0;background:#fff;color:var(--ink);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden;display:none}
+.results div{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:13px}
+.results div:hover{background:var(--snow)}
+.results small{color:var(--ink3)}
+.hbtns{display:flex;gap:8px;margin-left:auto}
+.btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;white-space:nowrap}
+.btn:hover{border-color:#b5c0cd}
+.btn.dark{background:#1b2c44;border-color:#2c3d55;color:#fff}
+.btn.dark:hover{background:#24395a}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.small{height:28px;font-size:12px;padding:0 9px}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.app{display:flex;height:calc(100% - 58px)}
+aside{width:460px;flex:none;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+nav.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
+nav.tabs button{flex:1;border:0;background:none;padding:12px 6px 10px;font-weight:600;font-size:12.5px;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav.tabs button.active{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:5px;vertical-align:1px}
+.pane{display:none;overflow-y:auto;padding:16px;flex:1;min-height:0}
+.pane.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card h3{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h3 .tag{font-family:Inter;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ink3);margin-left:auto}
+.muted{color:var(--ink3)}
+.small{font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--snow);border-radius:8px;padding:8px 10px}
+.kpi b{display:block;font-family:"JetBrains Mono";font-size:17px}
+.kpi span{font-size:11px;color:var(--ink3)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2);font-weight:600}
+label.f input,label.f select{height:32px;border:1px solid var(--line);border-radius:7px;padding:0 8px;background:#fff;font-weight:500;color:var(--ink)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.drop{border:2px dashed #c7d0db;border-radius:var(--r);padding:22px;text-align:center;color:var(--ink2);background:var(--snow);cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent);background:#fff8f3}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--snow);color:var(--ink2)}
+.pill.bad{background:var(--badbg);color:var(--bad)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.ok{background:var(--okbg);color:var(--ok)}
+.seg{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.seg.c3{border-left-color:var(--bad)}
+.seg:hover{background:var(--snow)}
+.seg .h{display:flex;gap:8px;align-items:center;font-weight:700}
+.seg .num{width:22px;height:22px;border-radius:50%;background:var(--warn);color:#fff;font-size:12px;display:grid;place-items:center;flex:none}
+.seg.c3 .num{background:var(--bad)}
+.seg ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink2)}
+.seg ul li{margin:2px 0}
+.verdict{border-radius:var(--r);padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.verdict.ok{background:var(--okbg);border:1px solid #b2f2bb}.verdict.warn{background:var(--warnbg);border:1px solid #ffd8a8}.verdict.bad{background:var(--badbg);border:1px solid #ffc9c9}
+.verdict .light{width:16px;height:16px;border-radius:50%;flex:none;margin-top:3px}
+.verdict.ok .light{background:var(--ok)}.verdict.warn .light{background:var(--warn)}.verdict.bad .light{background:var(--bad)}
+.verdict b{font-family:Archivo;font-size:15px}
+.verdict p{margin:4px 0 0;font-size:12.5px;color:var(--ink2)}
+.check{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.check:last-child{border-bottom:0}
+.check input{margin-top:2px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.check b{font-weight:700}
+.check .auto{font-size:10px;font-weight:700;color:var(--blue);background:#e7f5ff;padding:1px 6px;border-radius:5px;margin-left:4px}
+.check small{display:block;color:var(--ink3)}
+.prob{border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px}
+.prob.on{border-color:#ffc078;background:#fffaf5}
+.prob .ph{display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer}
+.prob .ph input{accent-color:var(--accent);width:16px;height:16px}
+.prob .pb{display:none;margin-top:10px;gap:12px;align-items:center}
+.prob.on .pb{display:flex}
+.prob .pb .f input{width:90px}
+.lvl{display:flex;gap:4px}
+.lvl button{flex:1;height:34px;border:1px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;font-weight:800;font-family:"JetBrains Mono"}
+.lvl button.sel{color:#fff;border-color:transparent}
+.l1{background:#ccff66!important;color:#2b3a00!important}.l2{background:#ffff00!important;color:#3a3a00!important}.l3{background:#ff9900!important}.l4{background:#ff0000!important}.l5{background:#000!important}
+table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t td,table.t th{padding:6px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.t th{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px}
+.formula{display:flex;align-items:center;justify-content:center;gap:8px;font-family:"JetBrains Mono";font-size:20px;font-weight:700;padding:10px 0}
+.formula .box{background:var(--snow);border-radius:8px;padding:6px 10px;text-align:center}
+.formula .box small{display:block;font-family:Inter;font-size:10px;color:var(--ink3);font-weight:600}
+#mapwrap{flex:1;position:relative;min-width:0}
+#map{position:absolute;inset:0}
+.mapbox{position:absolute;z-index:500;background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(14,26,43,.18);padding:10px 12px;font-size:12.5px}
+#layers{top:12px;right:12px;width:220px}
+#layers h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink3)}
+#layers label{display:flex;align-items:center;gap:7px;padding:3px 0;cursor:pointer}
+#layers input{accent-color:var(--accent)}
+#legend{left:12px;bottom:12px;max-width:290px}
+#legend .sw{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+#legend .li{display:inline-flex;align-items:center;margin:2px 8px 2px 0;font-size:11.5px}
+#zoomhint{top:12px;left:50%;transform:translateX(-50%);display:none;font-weight:600}
+#drawbar{top:12px;left:56px;display:none;gap:6px;align-items:center}
+#drawbar.show{display:flex}
+#profile{position:absolute;left:0;right:0;bottom:0;height:200px;background:#fff;border-top:1px solid var(--line);z-index:600;display:none}
+#profile.show{display:block}
+#profile .phead{position:absolute;top:6px;left:12px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px;z-index:2}
+#profile .pclose{position:absolute;top:4px;right:8px;z-index:2}
+#profsvg{width:100%;height:100%;display:block}
+#ptip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:7px 9px;border-radius:7px;font-size:11.5px;display:none;z-index:3;max-width:260px;line-height:1.45}
+#mapwrap.withprof #legend{bottom:212px}
+#busy{position:fixed;inset:0;background:rgba(14,26,43,.35);z-index:3000;display:none;place-items:center}
+#busy.show{display:grid}
+#busy div{background:#fff;padding:18px 22px;border-radius:12px;font-weight:600;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.spin{width:18px;height:18px;border:3px solid #ffd8a8;border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:9px;z-index:3001;display:none;max-width:90vw;font-size:13px}
+.segicon{width:24px;height:24px;border-radius:50%;color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.leaflet-popup-content{font-family:Inter;font-size:12.5px;margin:10px 12px}
+.pop b{font-family:Archivo}
+.pop .pr{display:flex;justify-content:space-between;gap:14px;padding:2px 0}
+.disc{font-size:11.5px;color:var(--ink3);line-height:1.5;border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+.chart svg{width:100%;display:block}
+.signal{display:flex;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.signal:last-child{border:0}
+.signal i{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none;background:var(--ink3)}
+.signal.bad i{background:var(--bad)}.signal.warn i{background:var(--warn)}.signal.ok i{background:var(--ok)}
+.links a{display:inline-block;margin:3px 6px 3px 0;font-size:12px;color:var(--blue);text-decoration:none;background:#e7f5ff;padding:3px 8px;border-radius:6px}
+.obs{font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:8px}
+@media (max-width:900px){
+  .app{flex-direction:column-reverse;height:auto}
+  aside{width:100%;border-right:0}
+  .pane{overflow:visible}
+  #mapwrap{height:62vh;flex:none}
+  header{height:auto;flex-wrap:wrap;padding:10px 12px}
+  .search{order:3;max-width:none;flex-basis:100%;margin:0}
+  .brand small{display:none}
+  #layers{width:180px}
+}
+@media print{
+  header,#mapwrap,nav.tabs,.noprint{display:none!important}
+  .app{display:block;height:auto}aside{width:100%;border:0}
+  .pane{display:none!important}#pane-informe{display:block!important;overflow:visible}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 32 32"><path d="M2 27 L12 9 L17 17 L21 11 L30 27 Z" fill="#fff"/><path d="M12 9 L15.2 14.6 L13 13.6 L11 15.4 L9.6 13.4 Z" fill="#e8590c"/><path d="M21 11 L23.4 15.4 L21.6 14.6 L20 16 L19.4 14.2Z" fill="#e8590c"/></svg>
+    <div><h1>Aliado STA</h1><small>Planificación en terreno de aludes</small></div>
+  </div>
+  <div class="search">
+    <svg id="qGo" style="cursor:pointer" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" placeholder="Buscar región, cima, valle o refugio…" autocomplete="off">
+    <div class="results" id="results"></div>
+  </div>
+  <div class="hbtns">
+    <button class="btn dark" id="bGpx" title="Cargar un archivo GPX">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>GPX</button>
+    <button class="btn dark" id="bDraw" title="Dibujar una ruta en el mapa">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20l4-1L19 8l-3-3L5 16z"/></svg>Dibujar</button>
+    <button class="btn primary" id="bView" title="Analizar la zona visible del mapa">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 14l5-5 4 4 3-3 4 4"/></svg>Analizar zona</button>
+  </div>
+  <input type="file" id="fGpx" accept=".gpx,application/gpx+xml,text/xml" hidden>
+</header>
+
+<div class="app">
+<aside>
+  <nav class="tabs" id="tabs">
+    <button data-t="ruta" class="active">Ruta</button>
+    <button data-t="zona">Zona</button>
+    <button data-t="cond">Condiciones</button>
+    <button data-t="decision">Decisión</button>
+    <button data-t="campo">Grupo y campo</button>
+    <button data-t="informe">Informe</button>
+  </nav>
+
+  <!-- RUTA -->
+  <section class="pane active" id="pane-ruta">
+    <div id="routeEmpty">
+      <div class="drop" id="drop">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#7a889b" stroke-width="1.8"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4"/></svg>
+        <div style="font-weight:700;margin-top:6px">Arrastra aquí tu GPX o haz clic para cargarlo</div>
+        <div class="small muted" style="margin-top:4px">También puedes <a href="#" id="lnkDraw">dibujar la ruta en el mapa</a>.</div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Qué analiza en tu ruta</h3>
+        <div class="small" style="line-height:1.6;color:var(--ink2)">
+          <b>Terreno</b>: inclinación de la ladera que pisas (≥30° = terreno de aludes), orientación, cota.<br>
+          <b>Exposición desde arriba</b>: laderas ≥30° por encima de ti cuyo alud podría alcanzarte (ángulo α ≥ 20°).<br>
+          <b>Trampas del terreno</b>: canales y vaguadas donde se acumula el depósito y cortados debajo (consecuencias).<br>
+          <b>Boletín</b>: cruza cada tramo con los problemas de aludes, orientaciones y cotas que indiques.<br>
+          <b>Horario</b>: hora estimada de paso (Munter) e insolación de cada ladera a esa hora.<br>
+          <b>Decisión</b>: método de reducción de Munter, ALPTRUTh, trampas heurísticas y checklist de grupo.
+        </div>
+      </div>
+    </div>
+    <div id="routeFull" style="display:none">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <div><div style="font-family:Archivo;font-weight:800;font-size:16px" id="rName">Ruta</div><div class="small muted" id="rSub"></div></div>
+        <div class="row"><button class="btn small" id="bProfile">Perfil</button><button class="btn small" id="bClear">Quitar</button></div>
+      </div>
+      <div id="rVerdict"></div>
+      <div class="grid3" id="rKpis" style="margin-bottom:12px"></div>
+      <div class="card">
+        <h3>Plan horario <span class="tag">Munter</span></h3>
+        <div class="grid2">
+          <label class="f">Fecha de la actividad<input type="date" id="pDate"></label>
+          <label class="f">Hora de salida<input type="time" id="pStart"></label>
+          <label class="f">Ritmo subida (unid/h)<input type="number" id="pUp" min="2" max="8" step="0.5"></label>
+          <label class="f">Ritmo bajada (unid/h)<input type="number" id="pDown" min="4" max="20" step="1"></label>
+        </div>
+        <div class="small muted" style="margin-top:6px">1 unidad = 1 km horizontal, 100 m de subida o 200 m de bajada. Esquí de montaña: ~4 u/h subiendo, ~10 u/h bajando.</div>
+      </div>
+      <div class="card">
+        <h3>Distribución del recorrido</h3>
+        <div id="rDist"></div>
+      </div>
+      <div class="card">
+        <h3>Orientaciones en terreno de aludes</h3>
+        <div class="row" style="align-items:flex-start;gap:16px">
+          <div id="rRose" style="width:150px"></div>
+          <div class="small" style="flex:1;color:var(--ink2);line-height:1.55" id="rRoseTxt"></div>
+        </div>
+      </div>
+      <h3 style="font-size:14px;margin:16px 0 8px">Puntos clave <span class="muted small" style="font-family:Inter;font-weight:500" id="rSegCount"></span></h3>
+      <div id="rSegs"></div>
+    </div>
+    <div class="disc" id="discRuta"></div>
+  </section>
+
+  <!-- ZONA -->
+  <section class="pane" id="pane-zona">
+    <div id="zoneEmpty" class="card">
+      <h3>Análisis de zona</h3>
+      <div class="small" style="color:var(--ink2);line-height:1.6">Busca una región arriba o mueve el mapa hasta la zona que quieres estudiar (zoom ≥ 12, unos 15×15 km como máximo) y pulsa <b>Analizar zona</b>.<br><br>Obtendrás la proporción de terreno de aludes, las orientaciones y cotas dominantes de las laderas empinadas y cuánto terreno cae en las orientaciones y cotas críticas del boletín. Haz clic en cualquier punto del mapa para inspeccionar su pendiente, orientación y cota.</div>
+    </div>
+    <div id="zoneFull" style="display:none"></div>
+    <div class="disc">Las capas del mapa (arriba a la derecha) te muestran la pendiente, la orientación y las zonas críticas del boletín en toda la zona visible.</div>
+  </section>
+
+  <!-- CONDICIONES -->
+  <section class="pane" id="pane-cond">
+    <div class="card">
+      <h3>Boletín de peligro de aludes (BPA)</h3>
+      <div class="small muted" style="margin-bottom:8px">Consulta el boletín oficial de la zona e introduce aquí lo que dice. Todo el análisis se recalcula con estos datos.</div>
+      <div class="links" id="bLinks"></div>
+      <div style="margin-top:10px" class="grid2">
+        <div><div class="small" style="font-weight:600;color:var(--ink2);margin-bottom:4px">Nivel por encima de la cota</div><div class="lvl" id="lvlHi"></div></div>
+        <div><div class="small" style="font-weight:600;color:var(--ink2);margin-bottom:4px">Nivel por debajo de la cota</div><div class="lvl" id="lvlLo"></div></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="f" style="flex:1">Cota de cambio de nivel (m)<input type="number" id="bThr" step="100"></label>
+      </div>
+      <div class="small" id="lvlDesc" style="margin-top:8px;color:var(--ink2);line-height:1.5"></div>
+    </div>
+    <div class="card">
+      <h3>Problemas de aludes <span class="tag">EAWS</span></h3>
+      <div class="small muted" style="margin-bottom:8px">Activa los problemas del boletín y marca orientaciones y cotas (clic en la rosa).</div>
+      <div id="probs"></div>
+    </div>
+    <div class="card">
+      <h3>Meteo de los últimos 7 días y previsión <span class="tag">Open-Meteo</span></h3>
+      <div class="row" style="margin-bottom:8px">
+        <label class="f" style="flex:1">Altitud de referencia (m)<input type="number" id="mElev" step="50"></label>
+        <button class="btn small" id="bMeteo" style="align-self:flex-end;height:32px">Cargar meteo</button>
+      </div>
+      <div class="small muted" id="mWhere"></div>
+      <div id="mBody"></div>
+    </div>
+  </section>
+
+  <!-- DECISION -->
+  <section class="pane" id="pane-decision">
+    <div id="dVerdict"></div>
+    <div class="card">
+      <h3>Método de reducción <span class="tag">Munter</span></h3>
+      <div class="formula" id="mFormula"></div>
+      <div class="small" id="mResult" style="text-align:center;margin-bottom:10px"></div>
+      <label class="f">Nivel de peligro aplicado
+        <select id="rmLvl"></select></label>
+      <div style="height:8px"></div>
+      <label class="f">Factor 1ª clase · inclinación del punto más empinado
+        <select id="rf1"><option value="auto">Automático (según la ruta)</option><option value="1">≥ 40° · sin factor</option><option value="2">35–39° · RF 2</option><option value="3">30–34° · RF 3</option><option value="4">&lt; 30° · RF 4</option></select></label>
+      <div style="height:8px"></div>
+      <label class="f">Factor 2ª clase · orientación / frecuentación
+        <select id="rf2"><option value="auto">Automático (según la ruta y el boletín)</option><option value="1">Ninguno</option><option value="2">Evito el sector N (NO–N–NE) · RF 2</option><option value="3">Evito la mitad norte (ONO–N–ESE) · RF 3</option><option value="4">Evito las orientaciones críticas del boletín · RF 4</option><option value="2t">Laderas muy frecuentadas · RF 2</option></select></label>
+      <div style="height:8px"></div>
+      <div class="grid2">
+        <label class="f">Personas en el grupo<input type="number" id="gSize" min="1" max="30"></label>
+        <label class="f">Distancias de descarga
+          <select id="gSpace"><option value="1">Sí (10 m subiendo, de uno en uno bajando)</option><option value="0">No</option></select></label>
+      </div>
+      <div class="small muted" id="rmNotes" style="margin-top:8px;line-height:1.5"></div>
+    </div>
+    <div class="card">
+      <h3>Pauta de inclinación por nivel de peligro</h3>
+      <table class="t" id="slopeRule"></table>
+      <div class="small muted" style="margin-top:6px">Pauta orientativa basada en la práctica habitual de la formación en aludes; el boletín y la observación local mandan.</div>
+    </div>
+    <div class="card">
+      <h3>Filtro 3×3 <span class="tag">Munter</span></h3>
+      <table class="t" id="t3x3"></table>
+    </div>
+  </section>
+
+  <!-- CAMPO -->
+  <section class="pane" id="pane-campo">
+    <div class="card">
+      <h3>ALPTRUTh · señales de alarma <span class="tag" id="alpCount"></span></h3>
+      <div id="alp"></div>
+      <div class="small muted" style="margin-top:6px">Con 3 o más señales en terreno de aludes, la probabilidad de accidente se dispara: elige terreno de menos de 30° sin exposición.</div>
+    </div>
+    <div class="card">
+      <h3>Trampas heurísticas · factor humano <span class="tag">FACETS</span></h3>
+      <div id="facets"></div>
+    </div>
+    <div class="card">
+      <h3>Observaciones y tests de estabilidad</h3>
+      <div class="grid3">
+        <label class="f">Test<select id="oType"><option>ECT</option><option>CT</option><option>PST</option><option>Bloque de Rutsch</option><option>Observación</option></select></label>
+        <label class="f">Resultado<input id="oRes" placeholder="ECTP14 Q1"></label>
+        <label class="f">Prof. capa (cm)<input id="oDepth" type="number"></label>
+        <label class="f">Orientación<select id="oAsp"></select></label>
+        <label class="f">Cota (m)<input id="oElev" type="number"></label>
+        <label class="f">Inclinación (°)<input id="oSlope" type="number"></label>
+      </div>
+      <label class="f" style="margin-top:8px">Nota<input id="oNote" placeholder="Capa débil de facetas bajo costra…"></label>
+      <button class="btn small" id="oAdd" style="margin-top:8px">Añadir observación</button>
+      <div id="oList" style="margin-top:8px"></div>
+      <div class="small muted" style="margin-top:6px">ECTP ≤ 21 golpes o CT con fractura "Q1/súbita" = manto inestable: señal de alarma.</div>
+    </div>
+    <div class="card">
+      <h3>Grupo, material y plan</h3>
+      <div id="gear"></div>
+      <div class="grid2" style="margin-top:8px">
+        <label class="f">Hora límite / vuelta<input type="time" id="pTurn"></label>
+        <label class="f">Punto de no retorno<input id="pNoReturn" placeholder="Collado, cota 2.650"></label>
+      </div>
+      <label class="f" style="margin-top:8px">Plan B (alternativa de bajo ángulo)<input id="pPlanB" placeholder="Bajar por el bosque de…"></label>
+      <div class="small" style="margin-top:10px;background:var(--badbg);color:var(--bad);padding:8px 10px;border-radius:8px;font-weight:600">Emergencias: 112. Si alguien queda sepultado: observar el punto de desaparición, buscar con DVA en recepción, sondear en espiral y palear en V. Cada minuto cuenta.</div>
+    </div>
+  </section>
+
+  <!-- INFORME -->
+  <section class="pane" id="pane-informe">
+    <div class="row noprint" style="margin-bottom:12px">
+      <button class="btn small" id="bCopy">Copiar informe</button>
+      <button class="btn small" id="bGpxOut">Descargar GPX con puntos clave</button>
+      <button class="btn small" id="bPrint">Imprimir / PDF</button>
+    </div>
+    <div id="report"></div>
+  </section>
+</aside>
+
+<div id="mapwrap">
+  <div id="map"></div>
+  <div class="mapbox" id="layers">
+    <h4>Mapa base</h4>
+    <label><input type="radio" name="base" value="topo" checked> Topográfico</label>
+    <label><input type="radio" name="base" value="sat"> Satélite</label>
+    <label><input type="radio" name="base" value="osm"> OpenStreetMap</label>
+    <h4 style="margin-top:8px">Capas de análisis</h4>
+    <label><input type="checkbox" id="lySlope" checked> Inclinación</label>
+    <label><input type="checkbox" id="lyAspect"> Orientación (≥ 25°)</label>
+    <label><input type="checkbox" id="lyCrit"> Zonas críticas del boletín</label>
+    <label style="margin-top:4px;flex-direction:column;align-items:stretch;gap:2px"><span class="muted small">Opacidad</span><input type="range" id="lyOp" min="0.2" max="1" step="0.05" value="0.6"></label>
+  </div>
+  <div class="mapbox" id="legend"></div>
+  <div class="mapbox" id="netwarn" style="display:none;top:60px;left:50%;transform:translateX(-50%);max-width:480px;border:2px solid #c92a2a"></div>
+  <div class="mapbox" id="zoomhint">Acércate (zoom ≥ 11) para ver las capas de terreno</div>
+  <div class="mapbox" id="drawbar"><b style="margin-right:4px">Dibujando</b><span class="muted small" id="drawInfo">clic para añadir puntos</span>
+    <button class="btn small" id="dUndo">Deshacer</button><button class="btn small primary" id="dDone">Terminar</button><button class="btn small" id="dCancel">Cancelar</button></div>
+  <div id="profile"><div class="phead">Perfil · color = clase de terreno · línea fina = inclinación</div><button class="btn small pclose" id="pClose">✕</button><svg id="profsvg"></svg><div id="ptip"></div></div>
+</div>
+</div>
+<div id="busy"><div><span class="spin"></span><span id="busyMsg">Cargando…</span></div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const RAD=Math.PI/180;
+const ASP=['N','NE','E','SE','S','SO','O','NO'];
+const sectorOf=az=>Math.round((((az%360)+360)%360)/45)%8;
+const fmt=(n,d=0)=>Number(n).toLocaleString('es-ES',{maximumFractionDigits:d,minimumFractionDigits:d});
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg,ms=3800){const t=$('#toast');t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',ms);}
+function busy(on,msg){$('#busy').classList.toggle('show',!!on);if(msg)$('#busyMsg').textContent=msg;}
+
+/* ---------------- Estado ---------------- */
+const PROBS={
+  new:{n:'Nieve reciente',c:'#4dabf7',d:'Nieve caída en los últimos días que aún no se ha asentado. Aludes de placa blanda o nieve reciente en la mayoría de orientaciones, sobre todo durante y justo después de la nevada.'},
+  wind:{n:'Nieve venteada',c:'#7950f2',d:'Placas formadas por el viento en sotavento: cerca de crestas, collados, canales y cambios de pendiente. Suelen ser recientes y localizables.'},
+  pers:{n:'Capas débiles persistentes',c:'#c2255c',d:'Capas débiles enterradas (escarcha de superficie o profundidad, facetas). Difícil de reconocer, desencadenamiento a distancia y aludes grandes. Mantener un margen amplio durante semanas.'},
+  wet:{n:'Nieve húmeda',c:'#f08c00',d:'Pérdida de cohesión por calentamiento, radiación o lluvia. Empeora a lo largo del día: madruga y termina pronto.'},
+  glide:{n:'Deslizamiento basal',c:'#868e96',d:'Todo el manto se desliza sobre suelo liso (hierba, losas). Grietas de deslizamiento visibles. Muy difícil de prever: evita estar debajo de ellas.'}
+};
+const LVL_TXT={
+  1:['Débil','Inestabilidad general escasa. Precaución en pendientes extremas y terreno con consecuencias (caídas, cortados).'],
+  2:['Limitado','Inestabilidad en algunas pendientes empinadas indicadas en el boletín. Elegir bien la ruta, sobre todo en las orientaciones y cotas críticas.'],
+  3:['Notable','Situación crítica: se producen la mayoría de los accidentes. Puede haber desencadenamiento por una sola persona y a distancia. Necesaria experiencia sólida en evaluación del peligro; evitar pendientes > 35° y ser muy conservador en las zonas del boletín.'],
+  4:['Fuerte','Inestabilidad en la mayoría de pendientes empinadas. Limitarse a terreno moderado (< 30°) y atención a la zona de alcance de aludes desde arriba.'],
+  5:['Muy fuerte','Situación extraordinaria. Renunciar a actividades en terreno de aludes.']
+};
+const LVL_COL={1:'#ccff66',2:'#ffff00',3:'#ff9900',4:'#ff0000',5:'#000000'};
+function tomorrow(){const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);}
+const DEF={
+  bulletin:{hi:2,lo:2,thr:2200,problems:Object.fromEntries(Object.keys(PROBS).map(k=>[k,{on:false,aspects:[],min:0,max:5000}]))},
+  plan:{date:tomorrow(),start:'08:00',up:4,down:10,turn:'13:00',noReturn:'',planB:''},
+  group:{size:4,spacing:true},
+  rm:{lvl:'auto',rf1:'auto',rf2:'auto'},
+  checks:{},obs:[],meteoElev:null
+};
+let S=JSON.parse(JSON.stringify(DEF));
+try{const sv=JSON.parse(localStorage.getItem('aliadoSTA')||'null');if(sv){for(const k of Object.keys(DEF)) if(sv[k]!==undefined) S[k]=sv[k]; S.plan.date=S.plan.date<new Date().toISOString().slice(0,10)?tomorrow():S.plan.date;}}catch(e){}
+for(const k of Object.keys(PROBS)) if(!S.bulletin.problems[k]) S.bulletin.problems[k]={on:false,aspects:[],min:0,max:5000};
+const R={route:null,samples:[],segs:[],stats:null,region:null,meteo:null,msum:null,src:null};
+function save(){try{localStorage.setItem('aliadoSTA',JSON.stringify(S));}catch(e){}}
+
+/* ---------------- Modelo digital del terreno (Terrarium, AWS Open Data) ---------------- */
+const DZ=13, TS=256;
+const demReady=new Map(), demPending=new Map();
+const lon2px=(lon,z)=>(lon+180)/360*TS*2**z;
+const lat2px=(lat,z)=>{const s=Math.sin(lat*RAD);return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*TS*2**z;};
+const px2lat=(py,z)=>Math.atan(Math.sinh(Math.PI-2*Math.PI*py/(TS*2**z)))/RAD;
+async function decodeTerrarium(blob){
+  const bmp=await createImageBitmap(blob);
+  const c=document.createElement('canvas');c.width=c.height=TS;
+  const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(bmp,0,0);
+  const d=ctx.getImageData(0,0,TS,TS).data, out=new Float32Array(TS*TS);
+  for(let i=0,j=0;i<out.length;i++,j+=4) out[i]=d[j]*256+d[j+1]+d[j+2]/256-32768;
+  return out;
+}
+function loadDem(z,x,y){
+  const n=2**z;x=((x%n)+n)%n;if(y<0||y>=n)return Promise.resolve(null);
+  const k=z+'/'+x+'/'+y;
+  if(demReady.has(k))return Promise.resolve(demReady.get(k));
+  if(demPending.has(k))return demPending.get(k);
+  const p=fetch(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`)
+    .then(r=>{if(!r.ok)throw new Error('DEM '+r.status);return r.blob();}).then(decodeTerrarium)
+    .then(a=>{demReady.set(k,a);demPending.delete(k);return a;})
+    .catch(e=>{demPending.delete(k);throw e;});
+  demPending.set(k,p);return p;
+}
+function tilesFor(b){
+  const x0=Math.floor(lon2px(b.w,DZ)/TS),x1=Math.floor(lon2px(b.e,DZ)/TS),y0=Math.floor(lat2px(b.n,DZ)/TS),y1=Math.floor(lat2px(b.s,DZ)/TS);
+  const l=[];for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)l.push([x,y]);return l;
+}
+async function ensureDem(b,max=160){
+  const l=tilesFor(b);if(l.length>max)throw new Error('Zona demasiado grande para analizar ('+l.length+' teselas). Acércate más.');
+  await Promise.all(l.map(([x,y])=>loadDem(DZ,x,y)));
+}
+let _lk='',_la=null;
+function pix(gx,gy){
+  const k=DZ+'/'+(gx>>8)+'/'+(gy>>8);
+  if(k!==_lk){_la=demReady.get(k)||null;_lk=k;}
+  return _la?_la[(gy&255)*256+(gx&255)]:NaN;
+}
+function elevAt(lat,lon){
+  const fx=lon2px(lon,DZ)-0.5,fy=lat2px(lat,DZ)-0.5,x=Math.floor(fx),y=Math.floor(fy),dx=fx-x,dy=fy-y;
+  return pix(x,y)*(1-dx)*(1-dy)+pix(x+1,y)*dx*(1-dy)+pix(x,y+1)*(1-dx)*dy+pix(x+1,y+1)*dx*dy;
+}
+const off=(lat,lon,dn,de)=>[lat+dn/111320,lon+de/(111320*Math.cos(lat*RAD))];
+function slopeAt(lat,lon,d=15){
+  const m=new Array(9);
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const p=off(lat,lon,-i*d,j*d);m[(i+1)*3+j+1]=elevAt(p[0],p[1]);}
+  const dzdx=((m[2]+2*m[5]+m[8])-(m[0]+2*m[3]+m[6]))/(8*d);
+  const dzdy=((m[0]+2*m[1]+m[2])-(m[6]+2*m[7]+m[8]))/(8*d);
+  const s=Math.atan(Math.hypot(dzdx,dzdy))/RAD;
+  let a=Math.atan2(-dzdx,-dzdy)/RAD;if(a<0)a+=360;
+  return {s,a,z:m[4]};
+}
+/* derivados por tesela para las capas */
+const derived=new Map();
+async function derivedTile(z,x,y){
+  const k=z+'/'+x+'/'+y;if(derived.has(k))return derived.get(k);
+  const A=await loadDem(z,x,y);if(!A)return null;
+  const n=2**z,sl=new Float32Array(65536),as=new Float32Array(65536);
+  const g=(r,c)=>A[(r<0?0:r>255?255:r)*256+(c<0?0:c>255?255:c)];
+  for(let r=0;r<256;r++){
+    const cell=40075016.686*Math.cos(px2lat(y*256+r+0.5,z)*RAD)/(256*n);
+    for(let c=0;c<256;c++){
+      const a=g(r-1,c-1),b=g(r-1,c),cc=g(r-1,c+1),d=g(r,c-1),f=g(r,c+1),gg=g(r+1,c-1),h=g(r+1,c),i=g(r+1,c+1);
+      const dzdx=((cc+2*f+i)-(a+2*d+gg))/(8*cell),dzdy=((a+2*b+cc)-(gg+2*h+i))/(8*cell);
+      const idx=r*256+c;sl[idx]=Math.atan(Math.hypot(dzdx,dzdy))/RAD;
+      let asp=Math.atan2(-dzdx,-dzdy)/RAD;if(asp<0)asp+=360;as[idx]=asp;
+    }
+  }
+  const D={slope:sl,aspect:as,elev:A};derived.set(k,D);
+  if(derived.size>400){derived.delete(derived.keys().next().value);}
+  return D;
+}
+
+/* ---------------- Clasificaciones ---------------- */
+function slopeColor(s){
+  if(s<27)return null;if(s<30)return [242,227,91];if(s<35)return [245,159,0];if(s<40)return [224,49,49];if(s<45)return [156,54,181];return [33,42,92];
+}
+const ASP_COL=[[37,99,235],[34,176,214],[64,192,87],[190,206,46],[245,159,0],[230,82,48],[194,37,92],[112,72,232]];
+function dangerAt(z){const b=S.bulletin;return z>=b.thr?b.hi:b.lo;}
+function probsAt(az,z){const out=[];const sec=sectorOf(az);for(const[k,p]of Object.entries(S.bulletin.problems))if(p.on&&p.aspects.includes(sec)&&z>=p.min&&z<=p.max)out.push(k);return out;}
+function anyProblems(){return Object.values(S.bulletin.problems).some(p=>p.on&&p.aspects.length);}
+
+/* ---------------- Mapa ---------------- */
+function netWarn(html){const w=$('#netwarn');w.innerHTML=html;w.style.display='block';}
+const OFFLINE_MSG='<b style="color:#c92a2a">Esta vista no tiene acceso a internet.</b><br>El mapa, el terreno, la meteo y el buscador se descargan en directo. Si la estás viendo dentro de la vista previa de Claude, <b>descarga el archivo y ábrelo con doble clic en Chrome, Firefox, Edge o Safari</b>.';
+if(!window.L){document.getElementById('map').innerHTML='<div style="padding:40px;max-width:520px;margin:auto;line-height:1.6">'+OFFLINE_MSG+'</div>';throw new Error('Leaflet no disponible');}
+const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView([42.62,1.0],10);
+const bases={
+  topo:L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap, SRTM · estilo © OpenTopoMap (CC-BY-SA)'}),
+  sat:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Imágenes © Esri, Maxar, Earthstar Geographics'}),
+  osm:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'})
+};
+bases.topo.addTo(map);
+let tileErr=0,tileOk=0;Object.values(bases).forEach(b=>{b.on('tileerror',()=>{tileErr++;chkNet();});b.on('tileload',()=>{tileOk++;});});
+function chkNet(){if(tileErr>=6&&tileOk===0&&!window._netShown){window._netShown=true;
+  fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&name=Tignes').then(r=>{if(!r.ok)throw 0;netWarn('<b>El mapa base no carga</b> (puede ser un bloqueo de OpenTopoMap o de tu red). Prueba a cambiar a «Satélite» u «OpenStreetMap» en el panel de capas.');}).catch(()=>netWarn(OFFLINE_MSG));}}
+setTimeout(()=>{if(tileOk===0&&tileErr===0)fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&name=Tignes').catch(()=>{if(!window._netShown){window._netShown=true;netWarn(OFFLINE_MSG);}});},6000);
+map.attributionControl.addAttribution('DEM: Terrarium/AWS Open Data · Meteo: Open-Meteo · Búsqueda: Nominatim');
+const TerrainLayer=L.GridLayer.extend({
+  createTile(coords,done){
+    const t=document.createElement('canvas');t.width=t.height=256;
+    if(coords.z<11){setTimeout(()=>done(null,t),0);return t;}
+    const zs=Math.min(coords.z,DZ),f=2**(coords.z-zs),px=Math.floor(coords.x/f),py=Math.floor(coords.y/f);
+    const ox=(coords.x-px*f)*256/f,oy=(coords.y-py*f)*256/f,mode=this.options.mode;
+    derivedTile(zs,px,py).then(D=>{
+      if(!D){done(null,t);return;}
+      const ctx=t.getContext('2d'),img=ctx.createImageData(256,256),p=img.data;
+      const crit=mode==='crit'?anyProblems():false;
+      for(let r=0;r<256;r++){const sr=Math.min(255,Math.floor(oy+r/f));
+        for(let c=0;c<256;c++){const sc=Math.min(255,Math.floor(ox+c/f)),i=sr*256+sc,s=D.slope[i];let col=null,al=255;
+          if(mode==='slope')col=slopeColor(s);
+          else if(mode==='aspect'){if(s>=25)col=ASP_COL[sectorOf(D.aspect[i])];}
+          else{ if(s>=30){ if(crit&&probsAt(D.aspect[i],D.elev[i]).length){col=[201,42,42];} else {col=[255,146,43];al=90;} } }
+          if(col){const o=(r*256+c)*4;p[o]=col[0];p[o+1]=col[1];p[o+2]=col[2];p[o+3]=al;}
+        }}
+      ctx.putImageData(img,0,0);done(null,t);
+    }).catch(()=>done(null,t));
+    return t;
+  }
+});
+const layers={
+  slope:new TerrainLayer({mode:'slope',opacity:.6,zIndex:5,minZoom:9}),
+  aspect:new TerrainLayer({mode:'aspect',opacity:.6,zIndex:6,minZoom:9}),
+  crit:new TerrainLayer({mode:'crit',opacity:.6,zIndex:7,minZoom:9})
+};
+layers.slope.addTo(map);
+function syncLayers(){
+  const op=+$('#lyOp').value;
+  [['slope','#lySlope'],['aspect','#lyAspect'],['crit','#lyCrit']].forEach(([k,id])=>{
+    const on=$(id).checked;layers[k].setOpacity(op);
+    if(on&&!map.hasLayer(layers[k]))layers[k].addTo(map);if(!on&&map.hasLayer(layers[k]))map.removeLayer(layers[k]);});
+  renderLegend();
+}
+$$('#layers input[name=base]').forEach(r=>r.onchange=()=>{Object.values(bases).forEach(b=>map.removeLayer(b));bases[r.value].addTo(map);});
+['#lySlope','#lyAspect','#lyCrit','#lyOp'].forEach(id=>$(id).oninput=syncLayers);
+function renderLegend(){
+  let h='';
+  if($('#lySlope').checked)h+='<div style="font-weight:700;margin-bottom:3px">Inclinación</div>'+[['27–29°','#f2e35b'],['30–34°','#f59f00'],['35–39°','#e03131'],['40–44°','#9c36b5'],['≥ 45°','#212a5c']].map(([t,c])=>`<span class="li"><span class="sw" style="background:${c}"></span>${t}</span>`).join('');
+  if($('#lyAspect').checked)h+='<div style="font-weight:700;margin:5px 0 3px">Orientación</div>'+ASP.map((a,i)=>`<span class="li"><span class="sw" style="background:rgb(${ASP_COL[i]})"></span>${a}</span>`).join('');
+  if($('#lyCrit').checked)h+='<div style="font-weight:700;margin:5px 0 3px">Boletín</div><span class="li"><span class="sw" style="background:#c92a2a"></span>≥30° en orientación/cota crítica</span><span class="li"><span class="sw" style="background:rgba(255,146,43,.4)"></span>≥30° resto</span>'+(anyProblems()?'':'<div class="muted small">Sin problemas marcados en Condiciones</div>');
+  if(R.samples.length)h+='<div style="font-weight:700;margin:5px 0 3px">Ruta</div>'+[['Sin terreno de aludes','#2b8a3e'],['27–29°','#f2c94c'],['Terreno de aludes / exposición','#f08c00'],['Crítico','#c92a2a']].map(([t,c])=>`<span class="li"><span class="sw" style="background:${c}"></span>${t}</span>`).join('');
+  $('#legend').innerHTML=h||'<span class="muted">Activa una capa</span>';$('#legend').style.display='block';
+}
+map.on('zoomend',()=>{$('#zoomhint').style.display=map.getZoom()<11?'block':'none';});
+$('#zoomhint').style.display=map.getZoom()<11?'block':'none';
+
+/* ---------------- Búsqueda ---------------- */
+let searchSeq=0,searchT=null;
+async function getJSON(url,ms=7000){
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),ms);
+  try{const r=await fetch(url,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json();}finally{clearTimeout(to);}
+}
+const GEOCODERS=[
+  ['Photon',async q=>(await getJSON('https://photon.komoot.io/api/?limit=8&q='+encodeURIComponent(q))).features.map(f=>{const p=f.properties,e=p.extent;
+    return {name:p.name||q,full:[p.name,p.city||p.county,p.state,p.country].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(', '),lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],bb:e?[e[3],e[1],e[0],e[2]]:null,type:p.osm_value};})],
+  ['Open-Meteo',async q=>((await getJSON('https://geocoding-api.open-meteo.com/v1/search?count=8&language=es&name='+encodeURIComponent(q))).results||[]).map(x=>({name:x.name,full:[x.name,x.admin1,x.country].filter(Boolean).join(', ')+(x.elevation?` · ${Math.round(x.elevation)} m`:''),lat:x.latitude,lon:x.longitude,type:x.feature_code}))],
+  ['Nominatim',async q=>(await getJSON('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&accept-language=es&q='+encodeURIComponent(q))).map(x=>({name:x.name||x.display_name.split(',')[0],full:x.display_name,lat:+x.lat,lon:+x.lon,bb:x.boundingbox?.map(Number),type:x.type}))]
+];
+async function doSearch(){
+  const q=$('#q').value.trim();if(q.length<2)return;
+  const seq=++searchSeq,box=$('#results');box.style.display='block';box.innerHTML='<div class="muted">Buscando «'+esc(q)+'»…</div>';
+  const errs=[];let res=[];
+  for(const [name,fn] of GEOCODERS){
+    try{res=await fn(q);}catch(e){errs.push(name+': '+(e.name==='AbortError'?'tiempo agotado':e.message));res=[];}
+    if(seq!==searchSeq)return;
+    if(res.length)break;
+  }
+  if(!res.length){
+    box.innerHTML=errs.length===GEOCODERS.length
+      ?`<div style="color:var(--bad)"><b>No hay conexión con los buscadores.</b><br><small>${esc(errs.join(' · '))}</small><br><small>Si estás viendo la página dentro de la vista previa de Claude, descárgala y ábrela en tu navegador.</small></div>`
+      :'<div class="muted">Sin resultados para «'+esc(q)+'». Prueba con el nombre de una cima, valle o estación.</div>';
+    return;
+  }
+  box.innerHTML='';
+  res.forEach(x=>{const d=document.createElement('div');d.innerHTML=`<b>${esc(x.name)}</b>${x.type?` <small>· ${esc(x.type)}</small>`:''}<br><small>${esc(x.full)}</small>`;
+    d.onclick=()=>{box.style.display='none';$('#q').value=x.name;
+      if(x.bb&&Math.abs(x.bb[1]-x.bb[0])>0.02)map.fitBounds([[x.bb[0],x.bb[2]],[x.bb[1],x.bb[3]]],{maxZoom:14});else map.setView([x.lat,x.lon],13);
+      R.searchPlace=x.name;};
+    box.appendChild(d);});
+}
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(searchT);doSearch();}if(e.key==='Escape')$('#results').style.display='none';});
+$('#q').addEventListener('input',()=>{clearTimeout(searchT);if($('#q').value.trim().length>=3)searchT=setTimeout(doSearch,450);});
+$('#qGo').onclick=()=>{clearTimeout(searchT);doSearch();};
+document.addEventListener('click',e=>{if(!e.target.closest('.search'))$('#results').style.display='none';});
+
+/* ---------------- Geometría ---------------- */
+function hav(a,b){const R6=6371008.8,dl=(b.lat-a.lat)*RAD,dn=(b.lon-a.lon)*RAD;const h=Math.sin(dl/2)**2+Math.cos(a.lat*RAD)*Math.cos(b.lat*RAD)*Math.sin(dn/2)**2;return 2*R6*Math.asin(Math.sqrt(h));}
+function bearing(a,b){const y=Math.sin((b.lon-a.lon)*RAD)*Math.cos(b.lat*RAD),x=Math.cos(a.lat*RAD)*Math.sin(b.lat*RAD)-Math.sin(a.lat*RAD)*Math.cos(b.lat*RAD)*Math.cos((b.lon-a.lon)*RAD);return (Math.atan2(y,x)/RAD+360)%360;}
+function resample(pts,step){
+  const out=[{lat:pts[0].lat,lon:pts[0].lon,d:0}];let dist=0,next=step;
+  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],seg=hav(a,b);if(seg<=0)continue;
+    while(dist+seg>=next){const t=(next-dist)/seg;out.push({lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t,d:next});next+=step;}
+    dist+=seg;}
+  const last=pts[pts.length-1];if(dist-out[out.length-1].d>1)out.push({lat:last.lat,lon:last.lon,d:dist});
+  return out;
+}
+function parseGPX(txt){
+  const doc=new DOMParser().parseFromString(txt,'application/xml');
+  if(doc.querySelector('parsererror'))throw new Error('El archivo no es un GPX válido');
+  const name=doc.querySelector('trk > name, rte > name, metadata > name')?.textContent?.trim();
+  let nodes=[...doc.getElementsByTagName('trkpt')];
+  if(!nodes.length)nodes=[...doc.getElementsByTagName('rtept')];
+  if(!nodes.length)nodes=[...doc.getElementsByTagName('wpt')];
+  const pts=nodes.map(n=>({lat:+n.getAttribute('lat'),lon:+n.getAttribute('lon'),ele:n.getElementsByTagName('ele')[0]?+n.getElementsByTagName('ele')[0].textContent:null})).filter(p=>isFinite(p.lat)&&isFinite(p.lon));
+  if(pts.length<2)throw new Error('El GPX no contiene una traza con puntos');
+  return {name:name||'Ruta GPX',pts};
+}
+
+/* ---------------- Sol ---------------- */
+function sunPos(date,lat,lon){
+  const d=date.getTime()/86400000+2440587.5-2451545.0;
+  const g=(357.529+0.98560028*d)%360,q=(280.459+0.98564736*d)%360;
+  const Lm=q+1.915*Math.sin(g*RAD)+0.020*Math.sin(2*g*RAD),e=23.439-0.00000036*d;
+  const RA=Math.atan2(Math.cos(e*RAD)*Math.sin(Lm*RAD),Math.cos(Lm*RAD))/RAD;
+  const dec=Math.asin(Math.sin(e*RAD)*Math.sin(Lm*RAD));
+  const GMST=((18.697374558+24.06570982441908*d)%24+24)%24;
+  const H=(((GMST*15+lon-RA)%360)+360)%360*RAD,la=lat*RAD;
+  const alt=Math.asin(Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(H));
+  const az=Math.atan2(-Math.sin(H),Math.tan(dec)*Math.cos(la)-Math.sin(la)*Math.cos(H));
+  return {alt:alt/RAD,az:((az/RAD)+360)%360};
+}
+function incidence(sun,slope,aspect){return Math.cos(slope*RAD)*Math.sin(sun.alt*RAD)+Math.sin(slope*RAD)*Math.cos(sun.alt*RAD)*Math.cos((sun.az-aspect)*RAD);}
+function utcOffsetSec(){if(R.meteo&&R.meteo.utc_offset_seconds!=null)return R.meteo.utc_offset_seconds;return -new Date(S.plan.date+'T12:00').getTimezoneOffset()*60;}
+function planInstant(hoursFromStart){
+  const [y,m,d]=S.plan.date.split('-').map(Number),[hh,mm]=(S.plan.start||'08:00').split(':').map(Number);
+  return new Date(Date.UTC(y,m-1,d,hh,mm)-utcOffsetSec()*1000+hoursFromStart*3600000);
+}
+function localHM(date){const t=new Date(date.getTime()+utcOffsetSec()*1000);return String(t.getUTCHours()).padStart(2,'0')+':'+String(t.getUTCMinutes()).padStart(2,'0');}
+function localHour(date){const t=new Date(date.getTime()+utcOffsetSec()*1000);return t.getUTCHours()+t.getUTCMinutes()/60;}
+
+/* ---------------- Análisis de ruta ---------------- */
+async function setRoute(route){
+  R.route=route;R.region=null;
+  const b=L.latLngBounds(route.pts.map(p=>[p.lat,p.lon]));map.fitBounds(b,{padding:[40,40],maxZoom:15});
+  await analyzeRoute();
+}
+async function analyzeRoute(){
+  const pts=R.route.pts;
+  busy(true,'Descargando modelo digital del terreno…');
+  try{
+    const smp=resample(pts,25);
+    let s=90,n=-90,w=180,e=-180;smp.forEach(p=>{s=Math.min(s,p.lat);n=Math.max(n,p.lat);w=Math.min(w,p.lon);e=Math.max(e,p.lon);});
+    const m=700/111320,mx=700/(111320*Math.cos(((s+n)/2)*RAD));
+    await ensureDem({s:s-m,n:n+m,w:w-mx,e:e+mx},220);
+    busy(true,'Analizando pendientes, exposición y trampas…');
+    await new Promise(r=>setTimeout(r,30));
+    for(let i=0;i<smp.length;i++){
+      const p=smp[i],sa=slopeAt(p.lat,p.lon,15);
+      p.z=sa.z;p.s=sa.s;p.a=sa.a;
+      let loc={s:sa.s,a:sa.a};
+      for(let k=0;k<8;k++){const q=off(p.lat,p.lon,30*Math.cos(k*45*RAD),30*Math.sin(k*45*RAD)),t=slopeAt(q[0],q[1],15);if(t.s>loc.s)loc=t;}
+      p.ls=loc.s;p.la=loc.a;
+      const pa=smp[Math.max(0,i-2)],pb=smp[Math.min(smp.length-1,i+2)];p.hd=bearing(pa,pb);
+      // Exposición desde arriba (ángulo alfa)
+      let exp=null;
+      for(let k=0;k<24;k++){const az=k*15*RAD;
+        for(let r=60;r<=600;r+=60){const q=off(p.lat,p.lon,r*Math.cos(az),r*Math.sin(az)),zq=elevAt(q[0],q[1]),dh=zq-p.z;
+          if(!(dh>15))continue;const alpha=Math.atan(dh/r)/RAD;if(alpha<20)continue;
+          const t=slopeAt(q[0],q[1],15);
+          if(t.s>=30&&t.s<60&&(!exp||alpha>exp.alpha))exp={alpha,slope:t.s,aspect:t.a,elev:zq,r,lat:q[0],lon:q[1]};
+        }}
+      p.exp=exp;
+      // Trampas: canal / vaguada
+      const side=[];for(const sgn of[-1,1]){const az=(p.hd+90*sgn)*RAD;const q1=off(p.lat,p.lon,40*Math.cos(az),40*Math.sin(az)),q2=off(p.lat,p.lon,90*Math.cos(az),90*Math.sin(az));
+        side.push({h40:elevAt(q1[0],q1[1])-p.z,h90:elevAt(q2[0],q2[1])-p.z,s:slopeAt(q1[0],q1[1],15).s});}
+      p.gully=side[0].h40>5&&side[1].h40>5&&side[0].h90>12&&side[1].h90>12;
+      p.gullySteep=p.gully&&Math.max(side[0].s,side[1].s)>=28;
+      // Consecuencias: cortados debajo
+      p.cliff=null;
+      if(p.ls>=28){const az=p.la*RAD;for(let r=30;r<=240;r+=30){const q=off(p.lat,p.lon,r*Math.cos(az),r*Math.sin(az)),t=slopeAt(q[0],q[1],15);if(t.s>=48){p.cliff={r,s:t.s};break;}}}
+    }
+    // suavizado de cota y horario Munter
+    const zs=smp.map((p,i)=>{let a=0,c=0;for(let j=Math.max(0,i-2);j<=Math.min(smp.length-1,i+2);j++){a+=smp[j].z;c++;}return a/c;});
+    let up=0,dn=0;for(let i=1;i<zs.length;i++){const dz=zs[i]-zs[i-1];if(dz>0)up+=dz;else dn-=dz;}
+    smp.forEach((p,i)=>p.zs=zs[i]);
+    R.samples=smp;
+    R.stats={dist:smp[smp.length-1].d,up,dn,zmax:Math.max(...smp.map(p=>p.z)),zmin:Math.min(...smp.map(p=>p.z))};
+    if(!S.meteoElev||R.src!=='route'){S.meteoElev=Math.round(R.stats.zmax/50)*50;}
+    R.src='route';
+    $('#mElev').value=S.meteoElev;
+    busy(false);
+    evaluate();
+    loadMeteo(true);
+  }catch(e){busy(false);toast('No se pudo analizar: '+e.message,6000);console.error(e);}
+}
+function computeTimes(){
+  const smp=R.samples;if(!smp.length)return;let t=0;smp[0].t=0;
+  for(let i=1;i<smp.length;i++){const dk=(smp[i].d-smp[i-1].d)/1000,dz=smp[i].zs-smp[i-1].zs;
+    t+=dz>=0?(dk+dz/100)/S.plan.up:(dk+(-dz)/200)/S.plan.down;smp[i].t=t;}
+  R.stats.time=t;
+}
+function evaluate(){
+  const smp=R.samples;if(!smp.length){renderAll();return;}
+  computeTimes();
+  const wetActive=S.bulletin.problems.wet.on||(R.msum&&R.msum.warm);
+  smp.forEach(p=>{
+    const fl=[];let c=0;
+    const onA=p.ls>=30;
+    if(p.ls>=27)c=1;
+    if(onA){c=2;fl.push({k:'slope',t:`Ladera de ${fmt(p.ls)}° orientada ${ASP[sectorOf(p.la)]}`});}
+    if(p.ls>=40){c=3;fl.push({k:'steep',t:`Pendiente ≥ 40°: terreno extremo, una caída o un alud pequeño tienen consecuencias graves`});}
+    if(p.exp){c=Math.max(c,2);fl.push({k:'exp',t:`Bajo zona de salida de ${fmt(p.exp.slope)}° (${ASP[sectorOf(p.exp.aspect)]}, ${fmt(p.exp.elev)} m) a ${p.exp.r} m · α ${fmt(p.exp.alpha)}°`});}
+    if(p.gully){if(onA||p.exp||p.gullySteep){c=3;fl.push({k:'trap',t:'Trampa: canal o vaguada, un alud pequeño puede enterrar a mucha profundidad'});}else fl.push({k:'trapm',t:'Vaguada (posible acumulación de nieve venteada)'});}
+    if(p.cliff){c=3;fl.push({k:'cliff',t:`Consecuencias: cortado de ~${fmt(p.cliff.s)}° a ${p.cliff.r} m ladera abajo`});}
+    const zones=[];if(onA)zones.push({a:p.la,z:p.z,w:'ladera'});if(p.exp)zones.push({a:p.exp.aspect,z:p.exp.elev,w:'zona de salida'});
+    const pk=new Set();zones.forEach(zn=>probsAt(zn.a,zn.z).forEach(k=>pk.add(k)));
+    if(pk.size){c=3;fl.push({k:'bpa',t:'Coincide con el boletín: '+[...pk].map(k=>PROBS[k].n).join(', ')});}
+    const lvl=dangerAt(Math.max(p.z,p.exp?p.exp.elev:0));p.lvl=lvl;
+    if(lvl>=3&&p.ls>=35){c=3;fl.push({k:'rule',t:`Nivel ${lvl}: supera la pauta de evitar > 35°`});}
+    if(lvl===3&&p.ls<35&&pk.size&&(onA||p.exp)){c=3;fl.push({k:'rule',t:`Nivel 3: terreno ≥ 30° en orientación/cota crítica del boletín, fuera de la pauta`});}
+    p.rule=fl.some(f=>f.k==='rule');
+    if(lvl>=4&&(onA||p.exp)){c=3;fl.push({k:'rule',t:`Nivel ${lvl}: terreno de aludes o exposición, limitarse a < 30° sin exposición`});}
+    if(lvl>=5){c=3;}
+    // Sol
+    p.time=planInstant(p.t||0);
+    if(onA||p.exp||p.ls>=25){
+      const sun=sunPos(p.time,p.lat,p.lon),asp=onA?p.la:(p.exp?p.exp.aspect:p.la),sl=onA?p.ls:(p.exp?p.exp.slope:p.ls);
+      const inc=incidence(sun,sl,asp),hr=localHour(p.time);p.inc=inc;
+      if(sun.alt>8&&inc>0.65&&hr>=11){fl.push({k:'sun',t:`Fuerte insolación a las ${localHM(p.time)} (${Math.round(inc*100)}%): humidificación y aludes de nieve húmeda`});if(wetActive)c=Math.max(c,3);}
+      if(sun.alt<=0&&p.t>0)fl.push({k:'dark',t:`Paso estimado de noche (${localHM(p.time)})`});
+    }
+    // sotavento por la meteo
+    if(R.msum&&R.msum.lee&&onA&&R.msum.lee.includes(sectorOf(p.la))&&!pk.has('wind'))fl.push({k:'lee',t:`Orientación a sotavento del viento reciente (${R.msum.windFrom}): posibles placas de viento`});
+    p.c=c;p.fl=fl;
+  });
+  // segmentos
+  const segs=[];let cur=null,gap=0;
+  smp.forEach((p,i)=>{
+    if(p.c>=2){if(!cur){cur={i0:i,i1:i};segs.push(cur);}cur.i1=i;gap=0;}
+    else if(cur){gap++;if(gap>3){cur=null;gap=0;}}
+  });
+  segs.forEach((g,n)=>{
+    const ps=smp.slice(g.i0,g.i1+1);g.n=n+1;g.c=Math.max(...ps.map(p=>p.c));
+    g.d0=smp[g.i0].d;g.d1=smp[g.i1].d;g.maxS=Math.max(...ps.map(p=>p.ls));
+    g.z0=Math.min(...ps.map(p=>p.z));g.z1=Math.max(...ps.map(p=>p.z));
+    g.asp=[...new Set(ps.filter(p=>p.ls>=30).map(p=>ASP[sectorOf(p.la)]))];
+    const seen=new Map();ps.forEach(p=>p.fl.forEach(f=>{if(f.k==='slope')return;if(!seen.has(f.k))seen.set(f.k,f.t);}));
+    const ex=ps.filter(p=>p.exp).sort((a,b)=>b.exp.alpha-a.exp.alpha)[0];
+    if(ex)seen.set('exp',`Bajo zonas de salida ≥ 30° (la más dominante: ${fmt(ex.exp.slope)}° ${ASP[sectorOf(ex.exp.aspect)]}, ${fmt(ex.exp.elev)} m, a ${ex.exp.r} m, α ${fmt(ex.exp.alpha)}°)`);
+    g.flags=[...seen.values()];g.t0=smp[g.i0].time;g.t1=smp[g.i1].time;
+    const mid=smp[Math.floor((g.i0+g.i1)/2)];g.lat=mid.lat;g.lon=mid.lon;
+  });
+  R.segs=segs;
+  // estadísticas
+  const st=R.stats,tot=st.dist||1,lenOf=f=>smp.reduce((a,p,i)=>a+(i&&f(p)?p.d-smp[i-1].d:0),0);
+  st.pc=[0,1,2,3].map(k=>lenOf(p=>p.c===k)/tot);
+  st.onA=lenOf(p=>p.ls>=30)/tot;st.exp=lenOf(p=>!!p.exp)/tot;
+  st.maxS=Math.max(...smp.map(p=>p.ls));st.traps=segs.filter(g=>g.flags.some(f=>/Trampa/.test(f))).length;
+  st.cliffs=smp.some(p=>p.cliff);
+  const steep40=smp.filter(p=>p.ls>=40).length;
+  st.ates=(steep40>=3||st.exp>0.25||st.onA>0.35||st.traps>=2||st.cliffs)?3:(st.onA>0||st.exp>0)?2:1;
+  st.rose=new Array(8).fill(0);st.roseExp=new Array(8).fill(0);
+  smp.forEach((p,i)=>{if(!i)return;const dd=p.d-smp[i-1].d;if(p.ls>=30)st.rose[sectorOf(p.la)]+=dd;if(p.exp)st.roseExp[sectorOf(p.exp.aspect)]+=dd;});
+  drawRoute();renderAll();
+}
+
+/* ---------------- Dibujo de la ruta en el mapa ---------------- */
+let routeLayer=L.layerGroup().addTo(map),hoverMk=null,regionRect=null;
+const CLS_COL=['#2b8a3e','#f2c94c','#f08c00','#c92a2a'];
+function drawRoute(){
+  routeLayer.clearLayers();const smp=R.samples;if(!smp.length)return;
+  L.polyline(smp.map(p=>[p.lat,p.lon]),{color:'#fff',weight:9,opacity:.9}).addTo(routeLayer);
+  let run=[smp[0]];
+  for(let i=1;i<smp.length;i++){run.push(smp[i]);if(smp[i].c!==run[0].c||i===smp.length-1){L.polyline(run.map(p=>[p.lat,p.lon]),{color:CLS_COL[run[0].c],weight:5,opacity:1}).addTo(routeLayer);run=[smp[i]];}}
+  L.circleMarker([smp[0].lat,smp[0].lon],{radius:7,color:'#fff',weight:2,fillColor:'#1971c2',fillOpacity:1}).bindTooltip('Inicio').addTo(routeLayer);
+  const l=smp[smp.length-1];L.circleMarker([l.lat,l.lon],{radius:7,color:'#fff',weight:2,fillColor:'#0e1a2b',fillOpacity:1}).bindTooltip('Final').addTo(routeLayer);
+  R.segs.forEach(g=>{
+    const mk=L.marker([g.lat,g.lon],{icon:L.divIcon({className:'',html:`<div class="segicon" style="background:${g.c>=3?'#c92a2a':'#f08c00'}">${g.n}</div>`,iconSize:[24,24],iconAnchor:[12,12]})}).addTo(routeLayer);
+    mk.bindPopup(segPopup(g));
+  });
+  smp.filter(p=>p.exp).forEach((p,i)=>{if(i%6)return;L.polyline([[p.lat,p.lon],[p.exp.lat,p.exp.lon]],{color:'#c92a2a',weight:1,dashArray:'3 4',opacity:.6}).addTo(routeLayer);});
+  renderLegend();
+}
+function segPopup(g){return `<div class="pop"><b>Punto clave ${g.n}</b><div class="muted">km ${fmt(g.d0/1000,1)}–${fmt(g.d1/1000,1)} · ${fmt(g.z0)}–${fmt(g.z1)} m · máx ${fmt(g.maxS)}°</div><ul style="padding-left:16px;margin:6px 0 0">${g.flags.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;}
+
+/* ---------------- Dibujar ---------------- */
+let drawing=false,drawPts=[],drawLine=null;
+function startDraw(){drawing=true;drawPts=[];map.doubleClickZoom.disable();$('#drawbar').classList.add('show');$('#bDraw').classList.add('on');map.getContainer().style.cursor='crosshair';drawLine=L.polyline([],{color:'#e8590c',weight:3,dashArray:'6 5'}).addTo(map);updDraw();}
+function endDraw(apply){
+  drawing=false;map.doubleClickZoom.enable();$('#drawbar').classList.remove('show');$('#bDraw').classList.remove('on');map.getContainer().style.cursor='';
+  if(drawLine){map.removeLayer(drawLine);drawLine=null;}
+  if(apply){if(drawPts.length<2){toast('Necesitas al menos 2 puntos');return;}setRoute({name:'Ruta dibujada',pts:drawPts.map(p=>({lat:p.lat,lon:p.lng}))});}
+}
+function updDraw(){drawLine&&drawLine.setLatLngs(drawPts);let d=0;for(let i=1;i<drawPts.length;i++)d+=drawPts[i-1].distanceTo(drawPts[i]);$('#drawInfo').textContent=drawPts.length?`${drawPts.length} puntos · ${fmt(d/1000,2)} km`:'clic para añadir puntos';}
+$('#bDraw').onclick=()=>drawing?endDraw(false):startDraw();
+$('#lnkDraw').onclick=e=>{e.preventDefault();startDraw();};
+$('#dUndo').onclick=()=>{drawPts.pop();updDraw();};
+$('#dDone').onclick=()=>endDraw(true);
+$('#dCancel').onclick=()=>endDraw(false);
+map.on('dblclick',()=>{if(drawing)endDraw(true);});
+
+/* ---------------- Inspector de punto ---------------- */
+map.on('click',async e=>{
+  if(drawing){drawPts.push(e.latlng);updDraw();return;}
+  const {lat,lng}=e.latlng;
+  if(map.getZoom()<11){return;}
+  try{
+    const m=400/111320;await ensureDem({s:lat-m,n:lat+m,w:lng-m*1.5,e:lng+m*1.5},20);
+    const sa=slopeAt(lat,lng,15);let mx=sa;for(let k=0;k<8;k++){const q=off(lat,lng,40*Math.cos(k*45*RAD),40*Math.sin(k*45*RAD)),t=slopeAt(q[0],q[1],15);if(t.s>mx.s)mx=t;}
+    const pk=sa.s>=30?probsAt(sa.a,sa.z):[],lvl=dangerAt(sa.z);
+    const tag=sa.s>=30?'<span class="pill bad">Terreno de aludes</span>':sa.s>=27?'<span class="pill warn">Casi 30°</span>':'<span class="pill ok">&lt; 27°</span>';
+    L.popup().setLatLng(e.latlng).setContent(`<div class="pop"><b>${fmt(sa.z)} m</b> ${tag}
+      <div class="pr"><span>Inclinación</span><b>${fmt(sa.s)}°</b></div>
+      <div class="pr"><span>Máx. en 40 m</span><b>${fmt(mx.s)}°</b></div>
+      <div class="pr"><span>Orientación</span><b>${ASP[sectorOf(sa.a)]} (${fmt(sa.a)}°)</b></div>
+      <div class="pr"><span>Nivel BPA a esta cota</span><b>${lvl} · ${LVL_TXT[lvl][0]}</b></div>
+      ${pk.length?`<div style="color:#c92a2a;font-weight:600;margin-top:4px">Problemas del boletín: ${pk.map(k=>PROBS[k].n).join(', ')}</div>`:''}
+      <div class="muted small" style="margin-top:4px">${lat.toFixed(5)}, ${lng.toFixed(5)}</div></div>`).openOn(map);
+  }catch(err){toast('No se pudo leer el terreno: '+err.message);}
+});
+
+/* ---------------- Análisis de zona ---------------- */
+async function analyzeView(){
+  if(map.getZoom()<12){toast('Acércate un poco más (zoom ≥ 12) para analizar la zona');return;}
+  const b=map.getBounds(),bb={s:b.getSouth(),n:b.getNorth(),w:b.getWest(),e:b.getEast()};
+  busy(true,'Descargando el terreno de la zona…');
+  try{
+    await ensureDem(bb,64);
+    busy(true,'Calculando estadísticas…');await new Promise(r=>setTimeout(r,30));
+    const N=140,ratio=(bb.e-bb.w)*Math.cos(((bb.n+bb.s)/2)*RAD)/(bb.n-bb.s),nx=Math.round(N*Math.sqrt(ratio)),ny=Math.round(N/Math.sqrt(ratio));
+    const cls=[0,0,0,0,0,0],rose=new Array(8).fill(0),roseC=new Array(8).fill(0),bands=new Map();let tot=0,crit=0,zmin=1e9,zmax=-1e9,aval=0;const zl=[];
+    for(let i=0;i<ny;i++)for(let j=0;j<nx;j++){
+      const lat=bb.s+(i+.5)/ny*(bb.n-bb.s),lon=bb.w+(j+.5)/nx*(bb.e-bb.w),t=slopeAt(lat,lon,15);if(!isFinite(t.s))continue;
+      tot++;zmin=Math.min(zmin,t.z);zmax=Math.max(zmax,t.z);zl.push(t.z);
+      const k=t.s<27?0:t.s<30?1:t.s<35?2:t.s<40?3:t.s<45?4:5;cls[k]++;
+      const band=Math.floor(t.z/200)*200;if(!bands.has(band))bands.set(band,{t:0,a:0,c:0});const bd=bands.get(band);bd.t++;
+      if(t.s>=30){aval++;rose[sectorOf(t.a)]++;bd.a++;if(probsAt(t.a,t.z).length){crit++;roseC[sectorOf(t.a)]++;bd.c++;}}
+    }
+    zl.sort((a,b)=>a-b);
+    const kmx=(bb.e-bb.w)*111.32*Math.cos(((bb.n+bb.s)/2)*RAD),kmy=(bb.n-bb.s)*111.32;
+    R.region={bb,tot,cls,rose,roseC,bands:[...bands.entries()].sort((a,b)=>b[0]-a[0]),zmin,zmax,aval,crit,kmx,kmy,p90:zl[Math.floor(zl.length*.9)],center:[(bb.n+bb.s)/2,(bb.e+bb.w)/2],name:R.searchPlace||'Zona visible'};
+    if(regionRect)map.removeLayer(regionRect);regionRect=L.rectangle([[bb.s,bb.w],[bb.n,bb.e]],{color:'#0e1a2b',weight:1.5,fill:false,dashArray:'6 6'}).addTo(map);
+    if(!R.route){S.meteoElev=Math.round(R.region.p90/50)*50;$('#mElev').value=S.meteoElev;R.src='region';}
+    busy(false);renderZone();showTab('zona');
+    if(!R.route)loadMeteo(true);
+  }catch(e){busy(false);toast(e.message,6000);}
+}
+$('#bView').onclick=analyzeView;
+
+/* ---------------- Meteo (Open-Meteo) ---------------- */
+function meteoPoint(){
+  if(R.samples.length){const zmax=R.samples.reduce((a,p)=>p.z>a.z?p:a,R.samples[0]);return [zmax.lat,zmax.lon,'punto más alto de la ruta'];}
+  if(R.region)return [...R.region.center,'centro de la zona analizada'];
+  const c=map.getCenter();return [c.lat,c.lng,'centro del mapa'];
+}
+async function loadMeteo(silent){
+  const [lat,lon,where]=meteoPoint();
+  const el=+$('#mElev').value||S.meteoElev||2000;S.meteoElev=el;save();
+  $('#mWhere').textContent=`Punto: ${where} (${lat.toFixed(3)}, ${lon.toFixed(3)}) · altitud ${fmt(el)} m`;
+  $('#mBody').innerHTML='<div class="muted small" style="padding:10px 0">Cargando meteo…</div>';
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&elevation=${el}&hourly=temperature_2m,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height,cloud_cover,snow_depth&daily=sunrise,sunset&past_days=7&forecast_days=10&timezone=auto&wind_speed_unit=kmh`;
+    const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
+    R.meteo=await r.json();summarizeMeteo();evaluate();
+    if(!silent)toast('Meteo actualizada');
+  }catch(e){$('#mBody').innerHTML='<div class="small" style="color:var(--bad);padding:8px 0">No se pudo cargar la meteo ('+esc(e.message)+').</div>';}
+}
+$('#bMeteo').onclick=()=>loadMeteo(false);
+function summarizeMeteo(){
+  const m=R.meteo;if(!m){R.msum=null;return;}
+  const H=m.hourly,T=H.time,i0=T.indexOf(S.plan.date+'T00:00');
+  if(i0<0){R.msum={out:true};return;}
+  const sh=parseInt((S.plan.start||'08').split(':')[0]),st=i0+sh;
+  const rng=(a,b)=>{const o=[];for(let i=Math.max(0,a);i<Math.min(T.length,b);i++)o.push(i);return o;};
+  const sum=(k,ix)=>ix.reduce((a,i)=>a+(H[k][i]||0),0),mx=(k,ix)=>Math.max(...ix.map(i=>H[k][i]??-1e9)),mn=(k,ix)=>Math.min(...ix.map(i=>H[k][i]??1e9));
+  const h24=rng(st-24,st),h72=rng(st-72,st),h168=rng(st-168,st),h48=rng(st-48,st),day=rng(i0+7,i0+18),night=rng(i0,i0+8);
+  const s={};
+  s.hn24=sum('snowfall',h24);s.hn72=sum('snowfall',h72);s.hn7=sum('snowfall',h168);
+  const windy=h72.filter(i=>H.wind_speed_10m[i]>=25);s.windyH=windy.length;s.wmax=mx('wind_speed_10m',h72);s.gmax=mx('wind_gusts_10m',h72);
+  if(windy.length){let x=0,y=0;windy.forEach(i=>{const w=H.wind_speed_10m[i]**2,d=H.wind_direction_10m[i]*RAD;x+=w*Math.sin(d);y+=w*Math.cos(d);});
+    s.wdir=(Math.atan2(x,y)/RAD+360)%360;s.windFrom=ASP[sectorOf(s.wdir)];const lee=(s.wdir+180)%360;s.lee=[sectorOf(lee-45),sectorOf(lee),sectorOf(lee+45)];}
+  s.tmax48=mx('temperature_2m',h48);s.fzl48=mx('freezing_level_height',h48);
+  s.rainH=h72.filter(i=>(H.rain[i]||0)>0.2).length;
+  s.dTmin=mn('temperature_2m',day);s.dTmax=mx('temperature_2m',day);s.dFzl=mx('freezing_level_height',day);s.dWind=mx('wind_speed_10m',day);s.dGust=mx('wind_gusts_10m',day);
+  s.dCloud=day.reduce((a,i)=>a+H.cloud_cover[i],0)/day.length;s.dPrec=sum('precipitation',day);s.dSnow=sum('snowfall',day);
+  s.nightMin=mn('temperature_2m',night);
+  const prev=rng(i0-24+7,i0-24+18);s.prevTmax=prev.length?mx('temperature_2m',prev):null;
+  s.depth=H.snow_depth[st]!=null?H.snow_depth[st]*100:null;
+  s.warm=s.tmax48>1||s.fzl48>S.meteoElev||s.rainH>0||s.dFzl>S.meteoElev+200;
+  const sig=[];
+  const crit=s.hn72>=30?'bad':s.hn72>=10?'warn':'ok';
+  sig.push({c:crit,t:`<b>${fmt(s.hn72)} cm</b> de nieve nueva en las 72 h previas (${fmt(s.hn24)} cm en 24 h, ${fmt(s.hn7)} cm en 7 días). Cantidad crítica de nieve nueva: 10–20 cm con condiciones desfavorables (viento, frío, capa vieja débil), 20–30 cm intermedias, 30–50 cm favorables.`});
+  if(s.windyH)sig.push({c:s.windyH>=6?'bad':'warn',t:`Viento ≥ 25 km/h durante <b>${s.windyH} h</b> (máx ${fmt(s.wmax)} km/h, rachas ${fmt(s.gmax)}) del <b>${s.windFrom}</b>: transporte de nieve, placas en orientaciones a sotavento <b>${s.lee.map(i=>ASP[i]).join(', ')}</b>, sobre todo cerca de crestas y collados.`});
+  else sig.push({c:'ok',t:'Sin periodos significativos de viento fuerte en las 72 h previas.'});
+  if(s.rainH)sig.push({c:'bad',t:`Lluvia sobre la nieve durante ${s.rainH} h: pérdida rápida de estabilidad, aludes de nieve húmeda.`});
+  if(s.tmax48>1||s.fzl48>S.meteoElev)sig.push({c:'warn',t:`Temperatura máxima de ${fmt(s.tmax48,1)} °C a ${fmt(S.meteoElev)} m (isoterma 0 °C hasta ${fmt(s.fzl48)} m) en las 48 h previas: humidificación del manto.`});
+  sig.push({c:s.nightMin<-2?'ok':s.nightMin<0.5?'warn':'bad',t:`Madrugada del día de la actividad: mínima ${fmt(s.nightMin,1)} °C. ${s.nightMin<-2?'Buen rehielo nocturno probable.':s.nightMin<0.5?'Rehielo débil: la nieve se humedecerá pronto.':'Sin rehielo: nieve húmeda desde primera hora.'}`});
+  if(s.prevTmax!=null&&s.dTmax-s.prevTmax>=5)sig.push({c:'bad',t:`Calentamiento rápido: ${fmt(s.dTmax-s.prevTmax,1)} °C más que el día anterior.`});
+  sig.push({c:s.dFzl>S.meteoElev+300?'warn':'ok',t:`Día de la actividad: ${fmt(s.dTmin,1)} a ${fmt(s.dTmax,1)} °C, isoterma 0 °C hasta ${fmt(s.dFzl)} m, viento máx ${fmt(s.dWind)} km/h (rachas ${fmt(s.dGust)}), nubosidad media ${fmt(s.dCloud)}%${s.dSnow>0.5?`, ${fmt(s.dSnow,1)} cm de nieve`:''}.`});
+  if(s.dCloud>80)sig.push({c:'warn',t:'Visibilidad probablemente reducida: más difícil evaluar el terreno y orientarse.'});
+  s.sig=sig;R.msum=s;
+}
+
+/* ---------------- Render: tabs ---------------- */
+function showTab(t){$$('#tabs button').forEach(b=>b.classList.toggle('active',b.dataset.t===t));$$('.pane').forEach(p=>p.classList.toggle('active',p.id==='pane-'+t));}
+$$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.t));
+
+function roseSVG(vals,size=150,hl=[],col='#e8590c',vals2=null){
+  const c=size/2,r0=12,r1=c-16,max=Math.max(...vals,...(vals2||[0]),1);
+  const wedge=(i,r,ins=r0)=>{const a0=(i*45-22.5)*RAD,a1=(i*45+22.5)*RAD;return `M${c+ins*Math.sin(a0)},${c-ins*Math.cos(a0)} L${c+r*Math.sin(a0)},${c-r*Math.cos(a0)} A${r},${r} 0 0 1 ${c+r*Math.sin(a1)},${c-r*Math.cos(a1)} L${c+ins*Math.sin(a1)},${c-ins*Math.cos(a1)} A${ins},${ins} 0 0 0 ${c+ins*Math.sin(a0)},${c-ins*Math.cos(a0)}Z`;};
+  let h=`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">`;
+  for(let i=0;i<8;i++)h+=`<path d="${wedge(i,r1)}" fill="${hl.includes(i)?'#ffe3e3':'#f1f3f5'}" stroke="#fff" stroke-width="1.5"/>`;
+  for(let i=0;i<8;i++){const r=r0+(r1-r0)*Math.sqrt(vals[i]/max);if(vals[i]>0)h+=`<path d="${wedge(i,r)}" fill="${col}" opacity=".85"/>`;}
+  if(vals2)for(let i=0;i<8;i++){const r=r0+(r1-r0)*Math.sqrt(vals2[i]/max);if(vals2[i]>0)h+=`<path d="${wedge(i,r)}" fill="#c92a2a"/>`;}
+  ASP.forEach((a,i)=>{const rr=c-6;h+=`<text x="${c+rr*Math.sin(i*45*RAD)}" y="${c-rr*Math.cos(i*45*RAD)+3.5}" text-anchor="middle" font-size="10" font-weight="700" fill="#41526a" font-family="Inter">${a}</text>`;});
+  return h+'</svg>';
+}
+function aspectPicker(sel,onToggle,size=120){
+  const c=size/2,r0=10,r1=c-14;const box=document.createElement('div');
+  const wedge=i=>{const a0=(i*45-22.5)*RAD,a1=(i*45+22.5)*RAD;return `M${c+r0*Math.sin(a0)},${c-r0*Math.cos(a0)} L${c+r1*Math.sin(a0)},${c-r1*Math.cos(a0)} A${r1},${r1} 0 0 1 ${c+r1*Math.sin(a1)},${c-r1*Math.cos(a1)} L${c+r0*Math.sin(a1)},${c-r0*Math.cos(a1)}Z`;};
+  let h=`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="cursor:pointer">`;
+  for(let i=0;i<8;i++)h+=`<path data-i="${i}" d="${wedge(i)}" fill="${sel.includes(i)?'#e03131':'#e9ecef'}" stroke="#fff" stroke-width="2"/>`;
+  ASP.forEach((a,i)=>{const rr=c-5;h+=`<text x="${c+rr*Math.sin(i*45*RAD)}" y="${c-rr*Math.cos(i*45*RAD)+3.5}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#41526a" font-family="Inter" pointer-events="none">${a}</text>`;});
+  box.innerHTML=h+'</svg>';box.querySelectorAll('path').forEach(p=>p.onclick=()=>onToggle(+p.dataset.i));return box;
+}
+function renderAll(){renderRoute();renderZone();renderCond();renderDecision();renderCampo();renderReport();renderProfile();renderTabDots();}
+function verdict(){
+  const smp=R.samples,rm=munter(),alp=alpCount();
+  if(!smp.length&&!R.region)return null;
+  const lvlMax=rm.lvl;let c='ok',t='Planificación favorable',p=[];
+  if(lvlMax>=5){c='bad';t='No salir a terreno de aludes';p.push('Nivel 5 en el boletín.');}
+  const c3=R.segs.filter(g=>g.c>=3).length,c2=R.segs.length-c3;
+  if(rm.rr>1){c='bad';t='Riesgo residual inaceptable';p.push(`El método de reducción da ${fmt(rm.rr,2)} (> 1). Busca una alternativa o reduce la exposición.`);}
+  if(rm.blocked){c='bad';t='La ruta no cumple la pauta para este nivel';p.push(rm.blocked);}
+  const rb=R.segs.filter(g=>g.flags.some(f=>/^Nivel \d/.test(f))).map(g=>g.n);
+  if(rb.length){c='bad';t='La ruta no cumple la pauta para el nivel de peligro';p.push(`Punto(s) clave ${rb.join(', ')} fuera de la pauta de inclinación/orientación del nivel del boletín. Busca una variante o renuncia.`);}
+  if(alp>=3&&(smp.some(x=>x.ls>=30||x.exp))){c='bad';p.push(`${alp} señales de alarma ALPTRUTh con terreno de aludes en la ruta.`);}
+  if(c!=='bad'&&c3){c='warn';t='Ruta viable con puntos críticos';}
+  if(c==='ok'&&c2){c='warn';t='Ruta en terreno de aludes: gestión activa';}
+  if(smp.length){if(c3)p.push(`${c3} punto(s) crítico(s) y ${c2} punto(s) en terreno de aludes. Revisa cada uno en el terreno.`);else if(c2)p.push(`${c2} tramo(s) por terreno de aludes o expuestos desde arriba.`);else p.push('Sin terreno ≥ 30° ni exposición detectada a la resolución del modelo (~30 m).');}
+  if(!anyProblems())p.push('Introduce los problemas del boletín en Condiciones para afinar el análisis.');
+  return {c,t,p};
+}
+function verdictHTML(v){return v?`<div class="verdict ${v.c}"><span class="light"></span><div><b>${v.t}</b><p>${v.p.join('<br>')}</p></div></div>`:'';}
+function renderTabDots(){
+  const v=verdict();$$('#tabs button .dot').forEach(d=>d.remove());
+  if(v){const b=$('#tabs button[data-t=decision]');b.insertAdjacentHTML('beforeend',`<span class="dot" style="background:${v.c==='ok'?'#2b8a3e':v.c==='warn'?'#f08c00':'#c92a2a'}"></span>`);}
+}
+function renderRoute(){
+  const has=R.samples.length>0;$('#routeEmpty').style.display=has?'none':'block';$('#routeFull').style.display=has?'block':'none';
+  $('#discRuta').innerHTML='Herramienta de apoyo a la planificación. El modelo de elevación (~30 m) suaviza el relieve: las pendientes reales cortas pueden ser varios grados más empinadas y no detecta cornisas, bosque ni cortados pequeños. No sustituye al boletín oficial, a la observación en el terreno ni a la formación (STA1/STA2).';
+  if(!has)return;
+  const st=R.stats;
+  $('#rName').textContent=R.route.name;
+  $('#rSub').textContent=`${fmt(st.dist/1000,1)} km · +${fmt(st.up)} m / −${fmt(st.dn)} m · ${fmt(st.zmin)}–${fmt(st.zmax)} m`;
+  $('#rVerdict').innerHTML=verdictHTML(verdict());
+  const hh=Math.floor(st.time),mm=Math.round((st.time-hh)*60);
+  const ates=['','Simple','Exigente','Complejo'][st.ates];
+  $('#rKpis').innerHTML=[
+    [`${hh}h${String(mm).padStart(2,'0')}`,'Horario Munter'],[`${fmt(st.maxS)}°`,'Pendiente máx.'],[ates,'ATES (estimado)'],
+    [`${fmt(st.onA*100)}%`,'Recorrido ≥ 30°'],[`${fmt(st.exp*100)}%`,'Expuesto desde arriba'],[`${R.segs.length}`,'Puntos clave']
+  ].map(([a,b])=>`<div class="kpi"><b>${a}</b><span>${b}</span></div>`).join('');
+  const lab=['Sin terreno de aludes (< 27°)','27–29°, casi terreno de aludes','Terreno de aludes o expuesto','Crítico'];
+  $('#rDist').innerHTML=`<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;margin-bottom:8px">${st.pc.map((v,i)=>v>0?`<div style="width:${v*100}%;background:${CLS_COL[i]}"></div>`:'').join('')}</div>`+st.pc.map((v,i)=>`<div class="row small" style="justify-content:space-between;padding:2px 0"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${CLS_COL[i]};margin-right:6px"></span>${lab[i]}</span><b class="mono">${fmt(v*st.dist/1000,2)} km</b></div>`).join('');
+  const crit=new Set();Object.values(S.bulletin.problems).forEach(p=>p.on&&p.aspects.forEach(a=>crit.add(a)));
+  $('#rRose').innerHTML=roseSVG(st.rose.map(v=>v),150,[...crit],'#f08c00',st.roseExp.some(v=>v)?st.roseExp:null);
+  const top=st.rose.map((v,i)=>[v,i]).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]);
+  $('#rRoseTxt').innerHTML=(top.length?`Recorres terreno ≥ 30° sobre todo en <b>${top.slice(0,3).map(x=>ASP[x[1]]).join(', ')}</b>.`:'No recorres terreno ≥ 30°.')+
+    (st.roseExp.some(v=>v)?`<br><span style="color:#c92a2a;font-weight:600">■</span> Orientación de las zonas de salida que te dominan desde arriba.`:'')+
+    (crit.size?`<br><span style="background:#ffe3e3;padding:0 4px;border-radius:3px">Fondo rosa</span> = orientaciones críticas del boletín.`:'');
+  $('#rSegCount').textContent=R.segs.length?`(${R.segs.length})`:'';
+  $('#rSegs').innerHTML=R.segs.length?R.segs.map(g=>`<div class="seg ${g.c>=3?'c3':''}" data-n="${g.n}"><div class="h"><span class="num">${g.n}</span>km ${fmt(g.d0/1000,1)}–${fmt(g.d1/1000,1)}<span class="muted small" style="font-weight:500;margin-left:auto">${localHM(g.t0)}–${localHM(g.t1)}</span></div>
+     <div class="small muted" style="margin-top:3px">${fmt(g.z0)}–${fmt(g.z1)} m · máx ${fmt(g.maxS)}°${g.asp.length?' · '+g.asp.join(', '):''}</div><ul>${g.flags.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`).join(''):'<div class="small muted">No se detectan tramos en terreno de aludes ni expuestos.</div>';
+  $$('#rSegs .seg').forEach(el=>el.onclick=()=>{const g=R.segs[+el.dataset.n-1];map.setView([g.lat,g.lon],Math.max(map.getZoom(),15));L.popup().setLatLng([g.lat,g.lon]).setContent(segPopup(g)).openOn(map);});
+  $('#pDate').value=S.plan.date;$('#pStart').value=S.plan.start;$('#pUp').value=S.plan.up;$('#pDown').value=S.plan.down;
+}
+function renderZone(){
+  const z=R.region;$('#zoneEmpty').style.display=z?'none':'block';$('#zoneFull').style.display=z?'block':'none';if(!z)return;
+  const pct=v=>v/z.tot*100;
+  const crit=new Set();Object.values(S.bulletin.problems).forEach(p=>p.on&&p.aspects.forEach(a=>crit.add(a)));
+  const lab=['< 27°','27–29°','30–34°','35–39°','40–44°','≥ 45°'],cc=['#d3f9d8','#f2e35b','#f59f00','#e03131','#9c36b5','#212a5c'];
+  const maxB=Math.max(...z.bands.map(b=>b[1].t));
+  const top=z.rose.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).filter(x=>x[0]>0);
+  $('#zoneFull').innerHTML=`
+  <div class="row" style="justify-content:space-between;margin-bottom:10px"><div><div style="font-family:Archivo;font-weight:800;font-size:16px">${esc(z.name)}</div><div class="small muted">${fmt(z.kmx,1)} × ${fmt(z.kmy,1)} km · ${fmt(z.zmin)}–${fmt(z.zmax)} m</div></div><button class="btn small" id="zRe">Recalcular</button></div>
+  <div class="grid3" style="margin-bottom:12px">
+    <div class="kpi"><b>${fmt(pct(z.aval))}%</b><span>Terreno ≥ 30°</span></div>
+    <div class="kpi"><b>${fmt(pct(z.cls[4]+z.cls[5]))}%</b><span>Terreno ≥ 40°</span></div>
+    <div class="kpi"><b style="color:${z.crit?'#c92a2a':'inherit'}">${anyProblems()?fmt(pct(z.crit))+'%':'—'}</b><span>Crítico según BPA</span></div>
+  </div>
+  <div class="card"><h3>Inclinación del terreno</h3>
+    <div style="display:flex;height:16px;border-radius:8px;overflow:hidden;margin-bottom:8px">${z.cls.map((v,i)=>v?`<div title="${lab[i]}" style="width:${pct(v)}%;background:${cc[i]}"></div>`:'').join('')}</div>
+    ${z.cls.map((v,i)=>`<div class="row small" style="justify-content:space-between;padding:1px 0"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${cc[i]};margin-right:6px"></span>${lab[i]}</span><b class="mono">${fmt(pct(v),1)}%</b></div>`).join('')}
+  </div>
+  <div class="card"><h3>Orientación del terreno de aludes</h3>
+    <div class="row" style="gap:16px;align-items:flex-start"><div>${roseSVG(z.rose,150,[...crit],'#f08c00',anyProblems()?z.roseC:null)}</div>
+    <div class="small" style="flex:1;line-height:1.55;color:var(--ink2)">${top.length?`Las laderas ≥ 30° miran sobre todo al <b>${top.slice(0,3).map(x=>ASP[x[1]]).join(', ')}</b>.`:''}${anyProblems()?`<br><span style="color:#c92a2a;font-weight:700">■</span> Parte que cae en las orientaciones y cotas del boletín.`:''}<br>Con viento reciente del ${R.msum?.windFrom||'—'}, las placas se forman en ${R.msum?.lee?R.msum.lee.map(i=>ASP[i]).join(', '):'las orientaciones a sotavento'}.</div></div>
+  </div>
+  <div class="card"><h3>Terreno de aludes por cota</h3>
+    <table class="t"><tr><th>Cota</th><th style="width:55%">Superficie (gris) · ≥ 30° (naranja) · crítico (rojo)</th><th>≥ 30°</th></tr>
+    ${z.bands.map(([b,v])=>`<tr><td class="mono">${fmt(b)}–${fmt(b+200)}</td><td><div style="position:relative;height:12px;background:#f1f3f5;border-radius:3px;width:${v.t/maxB*100}%"><div style="position:absolute;left:0;top:0;bottom:0;width:${v.a/v.t*100}%;background:#f59f00;border-radius:3px"></div><div style="position:absolute;left:0;top:0;bottom:0;width:${v.c/v.t*100}%;background:#c92a2a;border-radius:3px"></div></div></td><td class="mono">${fmt(v.a/v.t*100)}%</td></tr>`).join('')}
+    </table>
+    <div class="small muted" style="margin-top:6px">Línea de cambio de nivel del boletín: ${fmt(S.bulletin.thr)} m (nivel ${S.bulletin.hi} por encima, ${S.bulletin.lo} por debajo).</div>
+  </div>
+  <div class="card"><h3>Lectura de la zona</h3><div class="small" style="line-height:1.6;color:var(--ink2)">${zoneReading(z)}</div></div>`;
+  $('#zRe').onclick=analyzeView;
+}
+function zoneReading(z){
+  const a=z.aval/z.tot,l=[];
+  if(a<0.1)l.push('Zona mayoritariamente de bajo ángulo: abundan las opciones de terreno de < 30°, adecuado para días de peligro notable o superior, cuidando la exposición desde arriba.');
+  else if(a<0.35)l.push('Zona mixta: hay alternativas de bajo ángulo, pero muchas rutas cruzan o pasan bajo terreno de aludes. Clave: el trazado.');
+  else l.push('Zona de alta montaña con mucho terreno de aludes: el margen de elección es limitado. Reservar para días de peligro bajo y manto bien conocido.');
+  if((z.cls[4]+z.cls[5])/z.tot>0.08)l.push('Proporción significativa de terreno ≥ 40°: corredores y laderas extremas, terreno con consecuencias.');
+  if(anyProblems())l.push(z.crit/z.tot>0.1?'Una parte importante del terreno empinado coincide con las orientaciones y cotas del boletín: mira la capa «Zonas críticas» para trazar evitándolas.':'Poco terreno empinado coincide con las orientaciones y cotas del boletín: es más fácil trazar evitando el problema.');
+  const lvl=Math.max(S.bulletin.hi,S.bulletin.lo);l.push(`Con nivel ${lvl} (${LVL_TXT[lvl][0]}): ${LVL_TXT[lvl][1]}`);
+  return l.join('<br><br>');
+}
+const BULLETIN_LINKS=[['EAWS · mapa europeo','https://www.avalanches.org/'],['AEMET · Pirineo y Picos','https://www.aemet.es/es/eltiempo/prediccion/montana/boletin_peligro_aludes'],['ICGC · Catalunya','https://www.icgc.cat/'],['Lauegi · Val d\'Aran','https://lauegi.report/'],['Météo-France · BERA','https://meteofrance.com/meteo-montagne'],['SLF · Suiza','https://www.slf.ch/'],['avalanche.report · Euregio','https://avalanche.report/'],['Andorra · Meteo','https://www.meteo.ad/']];
+function renderCond(){
+  $('#bLinks').innerHTML=BULLETIN_LINKS.map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join('');
+  const lv=(id,key)=>{const el=$(id);el.innerHTML='';for(let i=1;i<=5;i++){const b=document.createElement('button');b.textContent=i;if(S.bulletin[key]===i)b.className='sel l'+i;b.onclick=()=>{S.bulletin[key]=i;changed();};el.appendChild(b);}};
+  lv('#lvlHi','hi');lv('#lvlLo','lo');$('#bThr').value=S.bulletin.thr;
+  const mxl=Math.max(S.bulletin.hi,S.bulletin.lo);
+  $('#lvlDesc').innerHTML=`<b>Nivel ${mxl} · ${LVL_TXT[mxl][0]}.</b> ${LVL_TXT[mxl][1]}`;
+  const box=$('#probs');box.innerHTML='';
+  Object.entries(PROBS).forEach(([k,P])=>{
+    const p=S.bulletin.problems[k],d=document.createElement('div');d.className='prob'+(p.on?' on':'');
+    d.innerHTML=`<label class="ph"><input type="checkbox" ${p.on?'checked':''}><span style="width:10px;height:10px;border-radius:3px;background:${P.c}"></span>${P.n}${p.on&&p.aspects.length?`<span class="pill" style="margin-left:auto">${p.aspects.sort((a,b)=>a-b).map(i=>ASP[i]).join(' ')}</span>`:''}</label>
+      <div class="pb"><div class="pk"></div><div style="flex:1"><div class="small muted" style="margin-bottom:6px;line-height:1.45">${P.d}</div><div class="row"><label class="f">Desde (m)<input type="number" step="100" class="pmin" value="${p.min}"></label><label class="f">Hasta (m)<input type="number" step="100" class="pmax" value="${p.max}"></label></div><div class="row" style="margin-top:6px"><button class="btn small pall">Todas</button><button class="btn small pnone">Ninguna</button></div></div></div>`;
+    d.querySelector('input[type=checkbox]').onchange=e=>{p.on=e.target.checked;changed();};
+    d.querySelector('.pk').appendChild(aspectPicker(p.aspects,i=>{const j=p.aspects.indexOf(i);j>=0?p.aspects.splice(j,1):p.aspects.push(i);changed();}));
+    d.querySelector('.pmin').onchange=e=>{p.min=+e.target.value;changed();};
+    d.querySelector('.pmax').onchange=e=>{p.max=+e.target.value;changed();};
+    d.querySelector('.pall').onclick=()=>{p.aspects=[0,1,2,3,4,5,6,7];changed();};
+    d.querySelector('.pnone').onclick=()=>{p.aspects=[];changed();};
+    box.appendChild(d);
+  });
+  renderMeteo();
+}
+function renderMeteo(){
+  const m=R.meteo,s=R.msum;if(!m){if(!$('#mBody').innerHTML)$('#mBody').innerHTML='<div class="small muted" style="padding:6px 0">Carga una ruta o analiza una zona para obtener la meteo automáticamente.</div>';return;}
+  if(s&&s.out){$('#mBody').innerHTML=`<div class="small" style="color:var(--warn);padding:6px 0">La fecha de la actividad (${S.plan.date}) está fuera del rango de la previsión (10 días). Cambia la fecha en la pestaña Ruta.</div>`+meteoChart();return;}
+  $('#mBody').innerHTML=`<div style="margin:8px 0">${s.sig.map(x=>`<div class="signal ${x.c}"><i></i><div>${x.t}</div></div>`).join('')}</div>
+    ${s.lee||s.hn72>=10||s.warm?`<button class="btn small" id="mApply">Proponer problemas al boletín según la meteo</button>`:''}
+    <div class="chart" style="margin-top:10px">${meteoChart()}</div>
+    <div class="small muted" style="margin-top:6px">Modelo meteorológico a ${fmt(S.meteoElev)} m, ajustado por altitud. El viento del modelo en crestas suele quedarse corto; contrasta con estaciones y con lo que ves (cornisas, sastrugi, plumeros).</div>`;
+  const ap=$('#mApply');if(ap)ap.onclick=()=>{
+    const P=S.bulletin.problems,base=Math.max(0,Math.round((S.meteoElev-600)/100)*100);
+    if(s.lee){P.wind.on=true;P.wind.aspects=[...new Set([...P.wind.aspects,...s.lee])];if(P.wind.min===0)P.wind.min=base;}
+    if(s.hn72>=10){P.new.on=true;if(!P.new.aspects.length)P.new.aspects=[0,1,2,3,4,5,6,7];if(P.new.min===0)P.new.min=base;}
+    if(s.warm){P.wet.on=true;if(!P.wet.aspects.length)P.wet.aspects=[2,3,4,5,6];}
+    toast('Propuestas añadidas. Compruébalas con el boletín oficial.');changed();};
+}
+function meteoChart(){
+  const H=R.meteo.hourly,T=H.time,n=T.length,W=420,h1=120,h2=70,pad=28;
+  const x=i=>pad+(W-pad-8)*i/(n-1);
+  const days=[];for(let i=0;i<n;i++)if(T[i].endsWith('T00:00'))days.push(i);
+  const dsnow=days.map(i=>{let s=0;for(let j=i;j<Math.min(n,i+24);j++)s+=H.snowfall[j]||0;return s;});
+  const smax=Math.max(10,...dsnow),tmin=Math.min(...H.temperature_2m),tmax=Math.max(...H.temperature_2m);
+  const ty=t=>8+(h1-24)*(1-(t-tmin)/((tmax-tmin)||1)),sy=s=>h1-16-(h1-30)*s/smax;
+  const td=T.indexOf(S.plan.date+'T00:00'),now=T.findIndex(t=>t>=new Date(Date.now()+utcOffsetSec()*1000).toISOString().slice(0,13));
+  let svg=`<svg viewBox="0 0 ${W} ${h1+h2+20}">`;
+  if(td>=0)svg+=`<rect x="${x(td)}" y="0" width="${x(Math.min(n-1,td+24))-x(td)}" height="${h1+h2+4}" fill="#fff4e6"/>`;
+  if(now>0)svg+=`<line x1="${x(now)}" x2="${x(now)}" y1="0" y2="${h1+h2+4}" stroke="#adb5bd" stroke-dasharray="3 3"/>`;
+  days.forEach((i,k)=>{const bw=(x(Math.min(n-1,i+23))-x(i))*.7;svg+=`<rect x="${x(i)+bw*.2}" y="${sy(dsnow[k])}" width="${bw}" height="${h1-16-sy(dsnow[k])}" fill="#74c0fc" rx="2"/>`;if(dsnow[k]>=1)svg+=`<text x="${x(i)+bw*.55}" y="${sy(dsnow[k])-3}" font-size="9" text-anchor="middle" fill="#1971c2" font-family="Inter">${Math.round(dsnow[k])}</text>`;
+    svg+=`<text x="${x(i)+2}" y="${h1+h2+16}" font-size="9" fill="#7a889b" font-family="Inter">${T[i].slice(8,10)}/${T[i].slice(5,7)}</text>`;});
+  if(tmin<0&&tmax>0)svg+=`<line x1="${pad}" x2="${W-8}" y1="${ty(0)}" y2="${ty(0)}" stroke="#ced4da"/><text x="2" y="${ty(0)+3}" font-size="9" fill="#7a889b">0°</text>`;
+  svg+=`<path d="${H.temperature_2m.map((t,i)=>(i?'L':'M')+x(i).toFixed(1)+','+ty(t).toFixed(1)).join('')}" fill="none" stroke="#e8590c" stroke-width="1.5"/>`;
+  svg+=`<text x="2" y="12" font-size="9" fill="#e8590c">${Math.round(tmax)}°</text><text x="2" y="${h1-18}" font-size="9" fill="#e8590c">${Math.round(tmin)}°</text>`;
+  const wmax=Math.max(40,...H.wind_speed_10m),wy=w=>h1+h2-4-(h2-14)*w/wmax;
+  svg+=`<line x1="${pad}" x2="${W-8}" y1="${wy(25)}" y2="${wy(25)}" stroke="#d0bfff" stroke-dasharray="2 3"/><text x="2" y="${wy(25)+3}" font-size="9" fill="#7950f2">25</text>`;
+  svg+=`<path d="${H.wind_speed_10m.map((w,i)=>(i?'L':'M')+x(i).toFixed(1)+','+wy(w).toFixed(1)).join('')}" fill="none" stroke="#7950f2" stroke-width="1.3"/>`;
+  for(let i=0;i<n;i+=12){const d=H.wind_direction_10m[i]+180,cx=x(i),cy=h1+6;svg+=`<g transform="translate(${cx},${cy}) rotate(${d})"><path d="M0,-5 L3,3 L0,1 L-3,3Z" fill="#7950f2" opacity="${H.wind_speed_10m[i]>=25?1:.35}"/></g>`;}
+  svg+=`</svg><div class="small muted"><span style="color:#74c0fc">■</span> nieve diaria (cm) · <span style="color:#e8590c">—</span> temperatura · <span style="color:#7950f2">—</span> viento (km/h; flechas = hacia dónde sopla) · <span style="background:#fff4e6;padding:0 3px">día de la actividad</span></div>`;
+  return svg;
+}
+/* ---------------- Método de reducción ---------------- */
+function munter(){
+  const smp=R.samples,b=S.bulletin;
+  let keyZ=smp.length?Math.max(...smp.filter(p=>p.ls>=30||p.exp).map(p=>Math.max(p.z,p.exp?p.exp.elev:0)),0)||R.stats.zmax:(R.region?R.region.zmax:b.thr);
+  let lvl=S.rm.lvl==='auto'?dangerAt(keyZ):+S.rm.lvl;
+  const DP={1:2,2:4,3:8,4:16,5:32}[lvl];
+  const notes=[];let blocked=null;
+  // RF1
+  let rf1;const maxS=smp.length?R.stats.maxS:null;
+  if(S.rm.rf1==='auto'){if(maxS==null)rf1=1;else rf1=maxS>=40?1:maxS>=35?2:maxS>=30?3:4;}else rf1=+S.rm.rf1;
+  // RF2
+  let rf2=1,rf2t='Ninguno';const wet=b.problems.wet.on&&b.problems.wet.aspects.length;
+  if(S.rm.rf2==='auto'){
+    if(smp.length){const az=smp.filter(p=>p.ls>=30).map(p=>p.la).concat(smp.filter(p=>p.exp).map(p=>p.exp.aspect));
+      const inN=a=>a>=292.5||a<=67.5;
+      const critAny=smp.some(p=>(p.ls>=30&&probsAt(p.la,p.z).length)||(p.exp&&probsAt(p.exp.aspect,p.exp.elev).length));
+      if(!az.length){rf2=1;rf2t='No aplica (sin terreno ≥ 30°)';}
+      else if(anyProblems()&&!critAny){rf2=4;rf2t='Evitas las orientaciones/cotas críticas del boletín';}
+      else if(!wet&&!az.some(a=>a>=292.5||a<=112.5)){rf2=3;rf2t='Evitas la mitad norte';}
+      else if(!wet&&!az.some(inN)){rf2=2;rf2t='Evitas el sector N';}
+    }
+  }else{const v=S.rm.rf2;rf2=v==='2t'?2:+v;rf2t=$('#rf2').selectedOptions[0]?.textContent||'';
+    if(wet&&(v==='2'||v==='3')){rf2=1;notes.push('Con nieve húmeda como problema, evitar el norte no reduce el riesgo: el factor de orientación norte no se aplica.');}}
+  // RF3
+  const n=+S.group.size||1,sp=S.group.spacing;let rf3=1,rf3t='Ninguno';
+  if(n>=5&&sp){rf3=2;rf3t='Grupo grande con distancias';}else if(n>=2&&n<=4&&sp){rf3=3;rf3t='Grupo pequeño con distancias';}else if(n>=2&&n<=4){rf3=2;rf3t='Grupo pequeño';}
+  if(n===1)notes.push('En solitario no hay factor de grupo y nadie puede rescatarte.');
+  if(n>=5&&!sp)notes.push('Un grupo grande sin distancias de descarga no reduce el riesgo.');
+  const rr=DP/(rf1*rf2*rf3);
+  if(lvl===3&&rf1===1)blocked='Con nivel 3, Munter exige un factor de 1ª clase: renunciar a pendientes ≥ 40° (idealmente < 35°).';
+  if(lvl===4&&rf1<4)blocked='Con nivel 4 solo es aceptable terreno < 30° y sin exposición desde arriba.';
+  if(lvl===5)blocked='Con nivel 5: renunciar al terreno de aludes.';
+  notes.push('Distancias de descarga: al menos 10 m subiendo; bajando, de uno en uno en las pendientes empinadas.');
+  return {lvl,DP,rf1,rf2,rf3,rf2t,rf3t,rr,notes,blocked,keyZ};
+}
+function renderDecision(){
+  const rm=munter();
+  $('#dVerdict').innerHTML=verdictHTML(verdict())||'<div class="card small muted">Carga una ruta o analiza una zona para obtener la valoración.</div>';
+  const sel=$('#rmLvl');sel.innerHTML=`<option value="auto">Automático: nivel ${dangerAt(rm.keyZ)} a ${fmt(rm.keyZ)} m (cota del terreno clave)</option>`+[1,2,3,4,5].map(i=>`<option value="${i}">${i} · ${LVL_TXT[i][0]}</option>`).join('');sel.value=S.rm.lvl;
+  $('#rf1').value=S.rm.rf1;$('#rf2').value=S.rm.rf2;$('#gSize').value=S.group.size;$('#gSpace').value=S.group.spacing?'1':'0';
+  const col=rm.rr<=1&&!rm.blocked?'#2b8a3e':'#c92a2a';
+  $('#mFormula').innerHTML=`<div class="box">${rm.DP}<small>Potencial (nivel ${rm.lvl})</small></div>÷<div class="box">${rm.rf1}×${rm.rf2}×${rm.rf3}<small>Reducción</small></div>=<div class="box" style="color:${col}">${fmt(rm.rr,2)}<small>Riesgo residual</small></div>`;
+  $('#mResult').innerHTML=rm.blocked?`<b style="color:#c92a2a">${rm.blocked}</b>`:rm.rr<=1?'<b style="color:#2b8a3e">Riesgo residual ≤ 1: aceptable según Munter</b>':'<b style="color:#c92a2a">Riesgo residual > 1: no aceptable</b>';
+  const r1t=S.rm.rf1==='auto'&&R.samples.length?`Auto: pendiente máx. ${fmt(R.stats.maxS)}°`:'';
+  $('#rmNotes').innerHTML=[r1t,`2ª clase: ${rm.rf2t}`,`3ª clase: ${rm.rf3t}`,...rm.notes].filter(Boolean).map(x=>'· '+x).join('<br>');
+  const rules=[[1,'Atención a pendientes > 40° y a las consecuencias de una caída.'],[2,'Evitar > 40° en orientaciones/cotas del boletín. Trazar con criterio.'],[3,'Evitar > 35° en general y > 30° en orientaciones/cotas del boletín. Atención a la exposición desde arriba.'],[4,'Solo terreno < 30° y lejos de la zona de alcance de laderas empinadas.'],[5,'Renunciar a terreno de aludes.']];
+  const cur=Math.max(S.bulletin.hi,S.bulletin.lo);
+  $('#slopeRule').innerHTML='<tr><th>Nivel</th><th>Pauta</th></tr>'+rules.map(([l,t])=>`<tr style="${l===cur?'background:#fff4e6;font-weight:600':''}"><td><span style="display:inline-block;width:22px;text-align:center;border-radius:4px;background:${LVL_COL[l]};color:${l>=4?'#fff':'#000'};font-weight:800">${l}</span></td><td>${t}</td></tr>`).join('');
+  const st=R.stats;const rows=[
+    ['Planificación (casa)',`Boletín: nivel ${S.bulletin.hi}/${S.bulletin.lo}${anyProblems()?', '+Object.entries(S.bulletin.problems).filter(([k,p])=>p.on).map(([k])=>PROBS[k].n).join(', '):''}. ${R.msum&&!R.msum.out?`Nieve nueva 72 h: ${fmt(R.msum.hn72)} cm.`:''}`,R.samples.length?`${R.segs.length} puntos clave, máx ${fmt(st.maxS)}°, ATES ${['','simple','exigente','complejo'][st.ates]}.`:'Mapa de pendientes y orientaciones.','Grupo de '+S.group.size+', material, horario Munter, plan B.'],
+    ['Local (en la zona)','Viento, temperatura, visibilidad, señales de alarma (ALPTRUTh), tests.','¿Coincide el terreno real con el plan? Cornisas, acumulaciones, huellas.','Estado y ritmo del grupo, horario, ánimos, presión.'],
+    ['Pendiente (antes de entrar)','Nieve de esta ladera: ¿venteada, húmeda, señales?','Inclinación real, orientación, trampas, consecuencias.','Distancias, punto seguro de reagrupamiento, quién va primero.']
+  ];
+  $('#t3x3').innerHTML='<tr><th></th><th>Condiciones</th><th>Terreno</th><th>Factor humano</th></tr>'+rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+}
+/* ---------------- Campo ---------------- */
+const ALP=[
+  ['A','Aludes recientes','Aludes de placa en los últimos días en pendientes similares.'],
+  ['L','Carga (Loading)','Nieve nueva o transporte por viento en las últimas 48 h.',()=>R.msum&&!R.msum.out&&(R.msum.hn72>=10||R.msum.windyH>=6)],
+  ['P','Trayectoria de alud evidente','La ruta cruza canales, conos de deyección o zonas sin árboles en pendiente.',()=>R.samples.some(p=>p.exp)],
+  ['T','Trampa del terreno','Canales, vaguadas, cortados o bosque debajo que agravan las consecuencias.',()=>R.samples.some(p=>p.c>=3&&p.fl.some(f=>f.k==='trap'||f.k==='cliff'))],
+  ['R','Lluvia o calentamiento rápido (Rain/Rapid warming)','Lluvia sobre nieve, subida brusca de temperatura o fuerte insolación.',()=>R.msum&&!R.msum.out&&(R.msum.rainH>0||(R.msum.prevTmax!=null&&R.msum.dTmax-R.msum.prevTmax>=5))],
+  ['U','Nieve inestable (Unstable)','Ruidos de «whumpf», grietas que se propagan, tests con propagación.',()=>S.obs.some(o=>/ECTP|Q1|SC|PST/i.test(o.res))],
+  ['Th','Deshielo (Thaw)','Nieve húmeda, hundimiento en superficie, bolas de nieve rodando.',()=>R.msum&&!R.msum.out&&R.msum.nightMin>0.5]
+];
+const FAC=[
+  ['F','Familiaridad','«Esta ruta la hemos hecho mil veces.» Lo conocido no garantiza que hoy esté estable.'],
+  ['A','Aceptación','Querer encajar o gustar al grupo; no querer ser quien dice «volvemos».'],
+  ['C','Compromiso / coherencia','«Ya que hemos llegado hasta aquí…» Mantener el plan pese a nuevas señales.'],
+  ['E','Experto aparente','Delegar la decisión en quien parece saber más, sin contrastar.'],
+  ['T','Huellas / escasez','Ver huellas da falsa seguridad; la prisa por la «primera bajada» empuja a asumir más riesgo.'],
+  ['S','Facilitación social','Ir más rápido o arriesgar más porque hay otros grupos alrededor.']
+];
+const GEAR=['DVA de todos en emisión, comprobado en salida (test de grupo)','Pala y sonda en cada mochila','Casco y, si se tiene, airbag revisado','Móvil cargado, 112 y cobertura revisada (mensajería/satélite)','Botiquín, manta térmica, frontal','Track offline y mapa; la ruta conocida por todo el grupo','Briefing: puntos clave, distancias, puntos seguros de reagrupamiento','Alguien fuera conoce el plan y la hora de regreso'];
+function alpCount(){return ALP.filter(a=>S.checks['alp_'+a[0]]||(a[3]&&a[3]())).length;}
+function renderCampo(){
+  $('#alp').innerHTML=ALP.map(a=>{const auto=a[3]?!!a[3]():false,on=S.checks['alp_'+a[0]]||auto;return `<label class="check"><input type="checkbox" data-k="alp_${a[0]}" ${on?'checked':''} ${auto?'disabled':''}><div><b>${a[0]} · ${a[1]}</b>${auto?'<span class="auto">detectado</span>':''}<small>${a[2]}</small></div></label>`;}).join('');
+  const n=alpCount();$('#alpCount').innerHTML=`<span class="pill ${n>=3?'bad':n?'warn':'ok'}">${n}/7</span>`;
+  $('#facets').innerHTML=FAC.map(a=>`<label class="check"><input type="checkbox" data-k="fac_${a[0]}" ${S.checks['fac_'+a[0]]?'checked':''}><div><b>${a[0]} · ${a[1]}</b><small>${a[2]}</small></div></label>`).join('')+'<div class="small muted" style="margin-top:6px">Marca las que reconozcas en tu grupo hoy. Nombrarlas en voz alta antes del punto clave ya ayuda.</div>';
+  $('#gear').innerHTML=GEAR.map((g,i)=>`<label class="check"><input type="checkbox" data-k="gear_${i}" ${S.checks['gear_'+i]?'checked':''}><div>${g}</div></label>`).join('');
+  $$('#pane-campo input[data-k]').forEach(c=>c.onchange=()=>{S.checks[c.dataset.k]=c.checked;changed(true);});
+  $('#oAsp').innerHTML=ASP.map(a=>`<option>${a}</option>`).join('');
+  $('#oList').innerHTML=S.obs.map((o,i)=>`<div class="obs"><b class="mono">${esc(o.type)}</b><span style="flex:1">${esc(o.res)}${o.depth?` · capa a ${esc(o.depth)} cm`:''} · ${esc(o.asp)}${o.elev?' '+esc(o.elev)+' m':''}${o.slope?' · '+esc(o.slope)+'°':''}${o.note?`<br><span class="muted">${esc(o.note)}</span>`:''}</span><a href="#" data-i="${i}" style="color:var(--bad)">✕</a></div>`).join('');
+  $$('#oList a').forEach(a=>a.onclick=e=>{e.preventDefault();S.obs.splice(+a.dataset.i,1);changed(true);});
+  $('#pTurn').value=S.plan.turn||'';$('#pNoReturn').value=S.plan.noReturn||'';$('#pPlanB').value=S.plan.planB||'';
+}
+$('#oAdd').onclick=()=>{S.obs.push({type:$('#oType').value,res:$('#oRes').value,depth:$('#oDepth').value,asp:$('#oAsp').value,elev:$('#oElev').value,slope:$('#oSlope').value,note:$('#oNote').value});['#oRes','#oDepth','#oElev','#oSlope','#oNote'].forEach(i=>$(i).value='');changed(true);};
+
+/* ---------------- Informe ---------------- */
+function reportText(){
+  const L2=[],st=R.stats,rm=munter(),v=verdict();
+  L2.push(`ALIADO STA · INFORME DE PLANIFICACIÓN`);
+  L2.push(`${R.route?R.route.name:(R.region?R.region.name:'Sin ruta')} · ${S.plan.date} · salida ${S.plan.start}`);
+  if(v)L2.push(`\nVALORACIÓN: ${v.t.toUpperCase()}\n- ${v.p.join('\n- ')}`);
+  if(R.samples.length){const hh=Math.floor(st.time),mm=Math.round((st.time-hh)*60);
+    L2.push(`\nRUTA: ${fmt(st.dist/1000,1)} km · +${fmt(st.up)}/−${fmt(st.dn)} m · ${fmt(st.zmin)}–${fmt(st.zmax)} m · ${hh}h${String(mm).padStart(2,'0')} (Munter)`);
+    L2.push(`Pendiente máx ${fmt(st.maxS)}° · ${fmt(st.onA*100)}% en ≥30° · ${fmt(st.exp*100)}% expuesto desde arriba · ATES estimado: ${['','simple','exigente','complejo'][st.ates]}`);
+    if(R.segs.length){L2.push('\nPUNTOS CLAVE');R.segs.forEach(g=>{L2.push(`${g.n}. km ${fmt(g.d0/1000,1)}–${fmt(g.d1/1000,1)} (${localHM(g.t0)}–${localHM(g.t1)}), ${fmt(g.z0)}–${fmt(g.z1)} m, máx ${fmt(g.maxS)}°${g.asp.length?' '+g.asp.join('/'):''}${g.c>=3?' [CRÍTICO]':''}`);g.flags.forEach(f=>L2.push('   - '+f));});}}
+  if(R.region){const z=R.region;L2.push(`\nZONA: ${z.name} · ${fmt(z.aval/z.tot*100)}% terreno ≥30° · ${fmt((z.cls[4]+z.cls[5])/z.tot*100)}% ≥40°${anyProblems()?` · ${fmt(z.crit/z.tot*100)}% crítico según BPA`:''}`);}
+  L2.push(`\nBOLETÍN: nivel ${S.bulletin.hi} por encima de ${fmt(S.bulletin.thr)} m, ${S.bulletin.lo} por debajo`);
+  Object.entries(S.bulletin.problems).filter(([k,p])=>p.on).forEach(([k,p])=>L2.push(`- ${PROBS[k].n}: ${p.aspects.sort((a,b)=>a-b).map(i=>ASP[i]).join(' ')||'(sin orientaciones)'} · ${fmt(p.min)}–${fmt(p.max)} m`));
+  if(R.msum&&!R.msum.out){L2.push(`\nMETEO (${fmt(S.meteoElev)} m)`);R.msum.sig.forEach(x=>L2.push('- '+x.t.replace(/<[^>]+>/g,'')));}
+  L2.push(`\nMÉTODO DE REDUCCIÓN: ${rm.DP} / (${rm.rf1}×${rm.rf2}×${rm.rf3}) = ${fmt(rm.rr,2)} ${rm.blocked?'· '+rm.blocked:rm.rr<=1?'(aceptable)':'(NO aceptable)'}`);
+  const al=ALP.filter(a=>S.checks['alp_'+a[0]]||(a[3]&&a[3]()));L2.push(`ALPTRUTh: ${al.length}/7${al.length?' → '+al.map(a=>a[1]).join(', '):''}`);
+  const fa=FAC.filter(a=>S.checks['fac_'+a[0]]);if(fa.length)L2.push(`Trampas heurísticas a vigilar: ${fa.map(a=>a[1]).join(', ')}`);
+  if(S.obs.length){L2.push('\nOBSERVACIONES');S.obs.forEach(o=>L2.push(`- ${o.type} ${o.res} ${o.depth?'capa '+o.depth+' cm ':''}${o.asp} ${o.elev||''} m ${o.slope?o.slope+'°':''} ${o.note||''}`));}
+  L2.push(`\nPLAN: grupo de ${S.group.size}${S.group.spacing?' con distancias':''} · hora límite ${S.plan.turn||'—'} · no retorno: ${S.plan.noReturn||'—'} · plan B: ${S.plan.planB||'—'}`);
+  const gm=GEAR.filter((g,i)=>!S.checks['gear_'+i]);if(gm.length)L2.push(`Pendiente de revisar: ${gm.join('; ')}`);
+  L2.push('\nEmergencias 112. Herramienta de apoyo: no sustituye al boletín oficial, a la observación ni a la formación.');
+  return L2.join('\n');
+}
+function renderReport(){$('#report').innerHTML=`<pre style="white-space:pre-wrap;font-family:Inter;font-size:12.5px;line-height:1.55;background:var(--snow);padding:14px;border-radius:10px;margin:0">${esc(reportText())}</pre>`;}
+$('#bCopy').onclick=async()=>{try{await navigator.clipboard.writeText(reportText());toast('Informe copiado');}catch(e){toast('No se pudo copiar: selecciona el texto manualmente');}};
+$('#bPrint').onclick=()=>{showTab('informe');try{window.print();}catch(e){}};
+$('#bGpxOut').onclick=()=>{
+  if(!R.route){toast('Primero carga o dibuja una ruta');return;}
+  const wpts=R.segs.map(g=>`<wpt lat="${g.lat.toFixed(6)}" lon="${g.lon.toFixed(6)}"><name>PC${g.n}${g.c>=3?' CRITICO':''}</name><desc>${esc(g.flags.join(' | '))}</desc></wpt>`).join('\n');
+  const trk=R.route.pts.map(p=>`<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">${p.ele!=null?`<ele>${p.ele}</ele>`:''}</trkpt>`).join('');
+  const gpx=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Aliado STA" xmlns="http://www.topografix.com/GPX/1/1">\n${wpts}\n<trk><name>${esc(R.route.name)}</name><trkseg>${trk}</trkseg></trk>\n</gpx>`;
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([gpx],{type:'application/gpx+xml'}));a.download=(R.route.name||'ruta').replace(/[^\w\-]+/g,'_')+'_puntos_clave.gpx';document.body.appendChild(a);a.click();a.remove();}catch(e){toast('No se pudo descargar');}
+};
+
+/* ---------------- Perfil ---------------- */
+function renderProfile(){
+  const el=$('#profile'),smp=R.samples;el.classList.toggle('show',smp.length>0&&!R.hideProf);$('#mapwrap').classList.toggle('withprof',smp.length>0&&!R.hideProf);
+  if(!smp.length||R.hideProf)return;
+  const svg=$('#profsvg'),W=svg.clientWidth||800,H=200,pl=44,pr=36,pt=26,pb=22;
+  const zmin=Math.min(...smp.map(p=>p.z)),zmax=Math.max(...smp.map(p=>p.z)),dmax=smp[smp.length-1].d;
+  const zr=Math.max(100,zmax-zmin),z0=zmin-zr*.08,z1=zmax+zr*.08;
+  const x=d=>pl+(W-pl-pr)*d/dmax,y=z=>pt+(H-pt-pb)*(1-(z-z0)/(z1-z0)),ys=s=>pt+(H-pt-pb)*(1-Math.min(s,60)/60);
+  let h='';
+  R.segs.forEach(g=>{h+=`<rect x="${x(g.d0)}" y="${pt-14}" width="${Math.max(2,x(g.d1)-x(g.d0))}" height="${H-pb-pt+14}" fill="${g.c>=3?'#ffe3e3':'#fff4e6'}"/><text x="${(x(g.d0)+x(g.d1))/2}" y="${pt-3}" font-size="10" font-weight="800" text-anchor="middle" fill="${g.c>=3?'#c92a2a':'#e67700'}" font-family="Inter">${g.n}</text>`;});
+  for(let i=1;i<smp.length;i++){const a=smp[i-1],b=smp[i];h+=`<path d="M${x(a.d)},${H-pb} L${x(a.d)},${y(a.z)} L${x(b.d)},${y(b.z)} L${x(b.d)},${H-pb}Z" fill="${CLS_COL[b.c]}" stroke="${CLS_COL[b.c]}" stroke-width=".8" opacity=".75"/>`;}
+  h+=`<path d="${smp.map((p,i)=>(i?'L':'M')+x(p.d).toFixed(1)+','+y(p.z).toFixed(1)).join('')}" fill="none" stroke="#0e1a2b" stroke-width="1.5"/>`;
+  h+=`<path d="${smp.map((p,i)=>(i?'L':'M')+x(p.d).toFixed(1)+','+ys(p.ls).toFixed(1)).join('')}" fill="none" stroke="#41526a" stroke-width=".8" opacity=".55"/>`;
+  [30,45].forEach(s=>{h+=`<line x1="${pl}" x2="${W-pr}" y1="${ys(s)}" y2="${ys(s)}" stroke="#41526a" stroke-dasharray="2 4" opacity=".35"/><text x="${W-pr+4}" y="${ys(s)+3}" font-size="9" fill="#7a889b" font-family="Inter">${s}°</text>`;});
+  const step=zr>800?200:zr>300?100:50;for(let z=Math.ceil(z0/step)*step;z<z1;z+=step)h+=`<text x="${pl-5}" y="${y(z)+3}" font-size="9.5" text-anchor="end" fill="#7a889b" font-family="Inter">${z}</text><line x1="${pl}" x2="${W-pr}" y1="${y(z)}" y2="${y(z)}" stroke="#e9ecef"/>`;
+  const ks=dmax>15000?2000:dmax>6000?1000:500;for(let d=0;d<=dmax;d+=ks)h+=`<text x="${x(d)}" y="${H-6}" font-size="9.5" text-anchor="middle" fill="#7a889b" font-family="Inter">${fmt(d/1000,d%1000?1:0)} km</text>`;
+  h+=`<line id="pcur" x1="0" x2="0" y1="${pt-14}" y2="${H-pb}" stroke="#e8590c" stroke-width="1.5" visibility="hidden"/>`;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=h;
+  svg.onmousemove=e=>{const rc=svg.getBoundingClientRect(),d=(e.clientX-rc.left-pl)/(W-pl-pr)*dmax;if(d<0||d>dmax)return;
+    let i=0,best=1e12;smp.forEach((p,k)=>{const dd=Math.abs(p.d-d);if(dd<best){best=dd;i=k;}});const p=smp[i];
+    const c=$('#pcur');c.setAttribute('x1',x(p.d));c.setAttribute('x2',x(p.d));c.setAttribute('visibility','visible');
+    const tip=$('#ptip');tip.style.display='block';tip.innerHTML=`<b>km ${fmt(p.d/1000,2)} · ${fmt(p.z)} m · ${localHM(p.time)}</b><br>Ladera ${fmt(p.ls)}° ${ASP[sectorOf(p.la)]}${p.fl.filter(f=>f.k!=='slope').map(f=>'<br>· '+esc(f.t)).join('')}`;
+    const tx=e.clientX-rc.left;tip.style.left=Math.min(tx+14,W-270)+'px';tip.style.top='28px';
+    if(!hoverMk)hoverMk=L.circleMarker([p.lat,p.lon],{radius:7,color:'#fff',weight:2,fillColor:'#e8590c',fillOpacity:1}).addTo(map);else hoverMk.setLatLng([p.lat,p.lon]);};
+  svg.onmouseleave=()=>{$('#ptip').style.display='none';$('#pcur')?.setAttribute('visibility','hidden');if(hoverMk){map.removeLayer(hoverMk);hoverMk=null;}};
+  svg.onclick=()=>{if(hoverMk)map.panTo(hoverMk.getLatLng());};
+}
+$('#pClose').onclick=()=>{R.hideProf=true;renderProfile();};
+$('#bProfile').onclick=()=>{R.hideProf=!R.hideProf;renderProfile();};
+window.addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderProfile,150);});
+
+/* ---------------- Eventos ---------------- */
+let critT=null;
+function changed(light){
+  save();
+  if(!light){clearTimeout(critT);critT=setTimeout(()=>{if(map.hasLayer(layers.crit))layers.crit.redraw();},250);}
+  if(R.meteo)summarizeMeteo();
+  if(R.samples.length){evaluate();}else renderAll();
+}
+$('#bThr').onchange=e=>{S.bulletin.thr=+e.target.value;changed();};
+$('#pDate').onchange=e=>{const old=S.plan.date;S.plan.date=e.target.value;changed(true);if(R.meteo&&old!==S.plan.date&&R.msum&&R.msum.out)loadMeteo(true);};
+$('#pStart').onchange=e=>{S.plan.start=e.target.value;changed(true);};
+$('#pUp').onchange=e=>{S.plan.up=clamp(+e.target.value||4,1,10);changed(true);};
+$('#pDown').onchange=e=>{S.plan.down=clamp(+e.target.value||10,2,30);changed(true);};
+$('#pTurn').onchange=e=>{S.plan.turn=e.target.value;changed(true);};
+$('#pNoReturn').onchange=e=>{S.plan.noReturn=e.target.value;changed(true);};
+$('#pPlanB').onchange=e=>{S.plan.planB=e.target.value;changed(true);};
+$('#rmLvl').onchange=e=>{S.rm.lvl=e.target.value;changed(true);};
+$('#rf1').onchange=e=>{S.rm.rf1=e.target.value;changed(true);};
+$('#rf2').onchange=e=>{S.rm.rf2=e.target.value;changed(true);};
+$('#gSize').onchange=e=>{S.group.size=clamp(+e.target.value||1,1,40);changed(true);};
+$('#gSpace').onchange=e=>{S.group.spacing=e.target.value==='1';changed(true);};
+$('#mElev').onchange=e=>{S.meteoElev=+e.target.value;save();};
+$('#bClear').onclick=()=>{R.route=null;R.samples=[];R.segs=[];R.stats=null;routeLayer.clearLayers();renderAll();renderLegend();};
+function readFile(f){const r=new FileReader();r.onload=()=>{try{const g=parseGPX(r.result);showTab('ruta');setRoute(g);}catch(e){toast(e.message,5000);}};r.readAsText(f);}
+$('#bGpx').onclick=()=>$('#fGpx').click();
+$('#drop').onclick=()=>$('#fGpx').click();
+$('#fGpx').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0]);e.target.value='';};
+['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.add('over');}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.remove('over');}));
+document.addEventListener('drop',e=>{const f=e.dataTransfer?.files?.[0];if(f)readFile(f);});
+
+$('#mElev').value=S.meteoElev||'';
+renderAll();renderLegend();
+</script>
+</body>
+</html>

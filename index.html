@@ -261,9 +261,10 @@ textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:8
 
   <!-- CONDICIONES -->
   <section class="pane" id="pane-cond">
+    <div class="card" id="bpaCard"></div>
     <div class="card">
       <h3>Boletín de peligro de aludes (BPA)</h3>
-      <div class="small muted" style="margin-bottom:8px">Consulta el boletín oficial de la zona e introduce aquí lo que dice. Todo el análisis se recalcula con estos datos.</div>
+      <div class="small muted" style="margin-bottom:8px">Valores que usa el análisis. Se rellenan solos con el boletín oficial cuando está disponible; puedes ajustarlos a mano.</div>
       <div class="links" id="bLinks"></div>
       <div style="margin-top:10px" class="grid2">
         <div><div class="small" style="font-weight:600;color:var(--ink2);margin-bottom:4px">Nivel por encima de la cota</div><div class="lvl" id="lvlHi"></div></div>
@@ -415,7 +416,8 @@ const PROBS={
   wind:{n:'Nieve venteada',c:'#7950f2',d:'Placas formadas por el viento en sotavento: cerca de crestas, collados, canales y cambios de pendiente. Suelen ser recientes y localizables.'},
   pers:{n:'Capas débiles persistentes',c:'#c2255c',d:'Capas débiles enterradas (escarcha de superficie o profundidad, facetas). Difícil de reconocer, desencadenamiento a distancia y aludes grandes. Mantener un margen amplio durante semanas.'},
   wet:{n:'Nieve húmeda',c:'#f08c00',d:'Pérdida de cohesión por calentamiento, radiación o lluvia. Empeora a lo largo del día: madruga y termina pronto.'},
-  glide:{n:'Deslizamiento basal',c:'#868e96',d:'Todo el manto se desliza sobre suelo liso (hierba, losas). Grietas de deslizamiento visibles. Muy difícil de prever: evita estar debajo de ellas.'}
+  glide:{n:'Deslizamiento basal',c:'#868e96',d:'Todo el manto se desliza sobre suelo liso (hierba, losas). Grietas de deslizamiento visibles. Muy difícil de prever: evita estar debajo de ellas.'},
+  gen:{n:'Zonas sensibles del boletín',c:'#e8590c',d:'Orientaciones y cotas que el boletín señala como más propensas a aludes sin indicar un tipo de problema estructurado (p. ej. Météo-France). Lee el texto del boletín.'}
 };
 const LVL_TXT={
   1:['Débil','Inestabilidad general escasa. Precaución en pendientes extremas y terreno con consecuencias (caídas, cortados).'],
@@ -431,7 +433,7 @@ const DEF={
   plan:{date:tomorrow(),start:'08:00',up:4,down:10,turn:'13:00',noReturn:'',planB:''},
   group:{size:4,spacing:true},
   rm:{lvl:'auto',rf1:'auto',rf2:'auto'},
-  checks:{},obs:[],meteoElev:null
+  checks:{},obs:[],meteoElev:null,autoBpa:true
 };
 let S=JSON.parse(JSON.stringify(DEF));
 try{const sv=JSON.parse(localStorage.getItem('aliadoSTA')||'null');if(sv){for(const k of Object.keys(DEF)) if(sv[k]!==undefined) S[k]=sv[k]; S.plan.date=S.plan.date<new Date().toISOString().slice(0,10)?tomorrow():S.plan.date;}}catch(e){}
@@ -683,7 +685,10 @@ async function analyzeRoute(){
     const smp=resample(pts,25);
     let s=90,n=-90,w=180,e=-180;smp.forEach(p=>{s=Math.min(s,p.lat);n=Math.max(n,p.lat);w=Math.min(w,p.lon);e=Math.max(e,p.lon);});
     const m=700/111320,mx=700/(111320*Math.cos(((s+n)/2)*RAD));
+    const hp=pts.reduce((a,p)=>p.ele!=null&&a.ele!=null&&p.ele>a.ele?p:a,pts[Math.floor(pts.length/2)]);
+    const bp=S.autoBpa?autoBulletin(hp.lat,hp.lon,true):null;
     await ensureDem({s:s-m,n:n+m,w:w-mx,e:e+mx},220);
+    if(bp){busy(true,'Buscando el boletín de aludes de la zona…');await bp;}
     busy(true,'Analizando pendientes, exposición y trampas…');
     await new Promise(r=>setTimeout(r,30));
     for(let i=0;i<smp.length;i++){
@@ -857,7 +862,9 @@ async function analyzeView(){
   const b=map.getBounds(),bb={s:b.getSouth(),n:b.getNorth(),w:b.getWest(),e:b.getEast()};
   busy(true,'Descargando el terreno de la zona…');
   try{
+    const bp=S.autoBpa?autoBulletin((bb.n+bb.s)/2,(bb.e+bb.w)/2,true):null;
     await ensureDem(bb,64);
+    if(bp){busy(true,'Buscando el boletín de aludes de la zona…');await bp;}
     busy(true,'Calculando estadísticas…');await new Promise(r=>setTimeout(r,30));
     const N=140,ratio=(bb.e-bb.w)*Math.cos(((bb.n+bb.s)/2)*RAD)/(bb.n-bb.s),nx=Math.round(N*Math.sqrt(ratio)),ny=Math.round(N/Math.sqrt(ratio));
     const cls=[0,0,0,0,0,0],rose=new Array(8).fill(0),roseC=new Array(8).fill(0),bands=new Map();let tot=0,crit=0,zmin=1e9,zmax=-1e9,aval=0;const zl=[];
@@ -873,7 +880,7 @@ async function analyzeView(){
     R.region={bb,tot,cls,rose,roseC,bands:[...bands.entries()].sort((a,b)=>b[0]-a[0]),zmin,zmax,aval,crit,kmx,kmy,p90:zl[Math.floor(zl.length*.9)],center:[(bb.n+bb.s)/2,(bb.e+bb.w)/2],name:R.searchPlace||'Zona visible'};
     if(regionRect)map.removeLayer(regionRect);regionRect=L.rectangle([[bb.s,bb.w],[bb.n,bb.e]],{color:'#0e1a2b',weight:1.5,fill:false,dashArray:'6 6'}).addTo(map);
     if(!R.route){S.meteoElev=Math.round(R.region.p90/50)*50;$('#mElev').value=S.meteoElev;R.src='region';}
-    busy(false);renderZone();showTab('zona');
+    busy(false);changed(true);showTab('zona');
     if(!R.route)loadMeteo(true);
   }catch(e){busy(false);toast(e.message,6000);}
 }
@@ -932,6 +939,165 @@ function summarizeMeteo(){
   if(s.dCloud>80)sig.push({c:'warn',t:'Visibilidad probablemente reducida: más difícil evaluar el terreno y orientarse.'});
   s.sig=sig;R.msum=s;
 }
+
+/* ---------------- Boletín automático (EAWS · CAAML v6) ---------------- */
+const BPA_AREAS=[['FR',41.3,-2.0,46.5,7.9],['CH',45.8,5.9,47.9,10.6],['ES',40.0,-7.5,43.4,0.9],['ES-AR',42.3,-1.0,42.95,0.8],['ES-CT',41.9,0.6,42.95,3.3],['ES-CT-L',42.55,0.55,42.95,1.2],['AD',42.4,1.38,42.7,1.8],
+ ['IT-21',44.0,6.6,46.5,9.3],['IT-23',45.4,6.7,46.0,7.95],['IT-25',45.5,8.4,46.7,11.0],['IT-32-BZ',46.2,10.3,47.1,12.5],['IT-32-TN',45.6,10.4,46.6,12.0],['IT-34',45.5,10.6,46.8,12.8],['IT-36',45.9,12.3,46.7,13.95],['IT-57',43.5,10.0,44.5,14.0],['IT-MeteoMont',37.5,8.0,44.6,17.0],
+ ['AT-02',46.3,12.6,47.2,15.1],['AT-03',47.4,14.4,48.1,16.2],['AT-04',47.4,12.9,48.8,14.9],['AT-05',46.9,12.0,48.1,13.9],['AT-06',46.6,13.5,47.9,16.2],['AT-07',46.6,10.0,47.8,13.0],['AT-08',46.8,9.5,47.6,10.3],
+ ['DE-BY',47.2,9.9,47.9,13.1],['SI',45.4,13.3,46.9,16.7],['NO',57.9,4.0,71.3,31.5],['SE',61.5,11.5,69.1,24.2],['FI',66.0,20.0,70.1,30.0],['GB',56.0,-6.5,58.7,-2.8],['CZ',49.5,12.0,51.1,19.0],['SK',48.6,17.0,49.7,22.6],['PL-12',49.1,19.4,49.5,20.4],['PL',49.0,14.0,51.2,24.2],['RO',44.5,21.5,48.0,27.0],['IS',63.2,-24.6,66.6,-13.4]];
+const BPA_FILE_ALT={'IT-25':['IT-25','IT-25-SO-LI']};
+const BPA_PROVIDERS=['ES-CT-L','ES-CT','ES-AR','ES','FR','CH','AD','IT-32-BZ','IT-32-TN','IT-MeteoMont','IT-21','IT-23','IT-25','IT-34','IT-36','IT-57','AT-02','AT-03','AT-04','AT-05','AT-06','AT-07','AT-08','DE-BY','SI','NO','SE','FI','GB','CZ','SK','PL-12','PL','RO','IS'];
+const BPA_DLV={low:1,moderate:2,considerable:3,high:4,very_high:5};
+const BPA_PMAP={new_snow:'new',wind_slab:'wind',cornices:'wind',persistent_weak_layers:'pers',wet_snow:'wet',gliding_snow:'glide'};
+const BPA_AMAP={N:0,NE:1,E:2,SE:3,S:4,SW:5,W:6,NW:7};
+const bpaCache={regions:new Map(),names:null,bull:new Map()};
+let bpaLayer=null;
+async function fetchFirst(urls,ms=15000){let last;for(const u of urls){try{return await getJSON(u,ms);}catch(e){last=e;}}throw last||new Error('sin datos');}
+async function regionFile(id){
+  if(bpaCache.regions.has(id))return bpaCache.regions.get(id);
+  const p=(async()=>{for(const f of (BPA_FILE_ALT[id]||[id])){
+      try{return await fetchFirst([`https://regions.avalanches.org/micro-regions/${f}_micro-regions.geojson.json`,`https://cdn.jsdelivr.net/npm/@eaws/micro-regions/${f}_micro-regions.geojson.json`]);}catch(e){}}
+    return null;})();
+  bpaCache.regions.set(id,p);return p;
+}
+async function regionNames(){
+  if(!bpaCache.names)bpaCache.names=fetchFirst(['https://regions.avalanches.org/micro-regions_names/es.json','https://cdn.jsdelivr.net/npm/@eaws/micro-regions_names/es.json']).catch(()=>({}));
+  return bpaCache.names;
+}
+function pip(x,y,ring){let ins=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))ins=!ins;}return ins;}
+function inGeom(lon,lat,g){if(!g)return false;const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];return polys.some(pl=>pip(lon,lat,pl[0])&&!pl.slice(1).some(hh=>pip(lon,lat,hh)));}
+function isoDay(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+async function findRegions(lat,lon){
+  const today=isoDay(new Date());
+  const cands=BPA_AREAS.filter(a=>lat>=a[1]&&lat<=a[3]&&lon>=a[2]&&lon<=a[4]).map(a=>a[0]);
+  const files=await Promise.all(cands.map(c=>regionFile(c)));
+  const hits=[];
+  files.forEach(fc=>{(fc?.features||[]).forEach(f=>{const pr=f.properties||{},id=pr.id||f.id;if(!id)return;
+    if(pr.end_date&&pr.end_date<today)return;if(pr.start_date&&pr.start_date>today)return;
+    if(inGeom(lon,lat,f.geometry)&&!hits.some(x=>x.id===id))hits.push({id,feature:f});});});
+  return {hits,cands,loaded:files.filter(Boolean).length};
+}
+function providersFor(id){return BPA_PROVIDERS.filter(p=>id===p||id.startsWith(p+'-'));}
+async function bulletinFile(prov,date){
+  const k=prov+'/'+date;if(bpaCache.bull.has(k))return bpaCache.bull.get(k);
+  const base=`https://static.avalanche.report/eaws_bulletins/${date}/${date}-${prov}`;
+  const p=(async()=>{let net=0,tries=0;for(const u of [base+'.es.json',base+'.json']){tries++;
+      try{const j=await getJSON(u,15000);return {json:j,url:u};}catch(e){if(!/HTTP/.test(e.message))net++;}}
+    return {json:null,netFail:net===tries};})();
+  bpaCache.bull.set(k,p);return p;
+}
+function bpaBound(v){if(v==null||v==='')return null;if(v==='treeline')return 2000;const n=parseFloat(v);return isFinite(n)?n:null;}
+function parseBulletin(b,regionID){
+  const r={hi:0,lo:0,thr:null,treeline:false,periods:new Set(),problems:{},texts:[],valid:b.validTime,pub:b.publicationTime,website:b.source?.provider?.website||b.source?.person?.website||null,providerName:b.source?.provider?.name||''};
+  let uni=0;
+  (b.dangerRatings||[]).forEach(d=>{const v=BPA_DLV[d.mainValue];if(!v)return;if(d.validTimePeriod&&d.validTimePeriod!=='all_day')r.periods.add(d.validTimePeriod);
+    const el=d.elevation||{},lb=bpaBound(el.lowerBound),ub=bpaBound(el.upperBound);if(el.lowerBound==='treeline'||el.upperBound==='treeline')r.treeline=true;
+    if(lb!=null&&ub==null){r.hi=Math.max(r.hi,v);r.thr=lb;}else if(ub!=null&&lb==null){r.lo=Math.max(r.lo,v);if(r.thr==null)r.thr=ub;}else uni=Math.max(uni,v);});
+  if(!r.hi&&!r.lo&&!uni)return null;
+  r.hi=Math.max(r.hi,uni);r.lo=Math.max(r.lo,uni);if(!r.hi)r.hi=r.lo;if(!r.lo)r.lo=r.hi;
+  (b.avalancheProblems||[]).forEach(pb=>{const k=BPA_PMAP[pb.problemType];if(!k)return;
+    const el=pb.elevation||{},lb=bpaBound(el.lowerBound),ub=bpaBound(el.upperBound);if(el.lowerBound==='treeline'||el.upperBound==='treeline')r.treeline=true;
+    const asp=(pb.aspects||[]).map(a=>BPA_AMAP[a]).filter(a=>a!=null);
+    const cur=r.problems[k]||{on:true,aspects:[],min:1e9,max:-1e9,src:[]};
+    cur.aspects=[...new Set([...cur.aspects,...(asp.length?asp:[0,1,2,3,4,5,6,7])])];cur.min=Math.min(cur.min,lb??0);cur.max=Math.max(cur.max,ub??5000);cur.src.push(pb.problemType);r.problems[k]=cur;});
+  if(!Object.keys(r.problems).length){
+    const mf=b.customData?.MeteoFrance?.avalancheProneLocation;
+    let asp=(mf?.aspects||[]).map(a=>BPA_AMAP[a]).filter(a=>a!=null);
+    if(!asp.length){const da=(b.dangerRatings||[]).flatMap(d=>d.aspects||[]).map(a=>BPA_AMAP[a]).filter(a=>a!=null);if(da.length&&da.length<8)asp=[...new Set(da)];}
+    if(asp.length){const lb=bpaBound(mf?.elevation?.lowerBound);r.problems.gen={on:true,aspects:asp,min:lb??(r.thr??0),max:5000,src:['avalancheProneLocation']};}
+  }
+  const clean=s=>esc(String(s||'')).replace(/&lt;br\s*\/?&gt;/gi,'<br>').trim();
+  const add=(t,s)=>{if(s&&String(s).trim())r.texts.push([t,clean(s)]);};
+  add('Resumen',b.highlights);add('Actividad de aludes',b.avalancheActivity?.highlights);add('',b.avalancheActivity?.comment);
+  add('Estructura del manto',b.snowpackStructure?.highlights);add('',b.snowpackStructure?.comment);add('Recomendaciones',b.travelAdvisory?.comment);
+  const tend=Array.isArray(b.tendency)?b.tendency:(b.tendency?[b.tendency]:[]);tend.forEach(t=>add('Tendencia',t.highlights||t.comment));
+  add('Meteo',b.weatherForecast?.comment);
+  return r;
+}
+function bpaDates(){
+  const today=isoDay(new Date()),tm=isoDay(new Date(Date.now()+86400000)),pd=S.plan.date;
+  if(pd<=today)return [pd];
+  if(pd===tm)return [tm,today];
+  return [tm,today];
+}
+async function autoBulletin(lat,lon,silent){
+  R.bpa={status:'loading',lat,lon};renderBpa();
+  try{
+    const {hits,loaded,cands}=await findRegions(lat,lon);
+    if(!cands.length){R.bpa={status:'none',msg:'Fuera de las regiones europeas de la EAWS: consulta el servicio de predicción de aludes local.'};return finishBpa(silent);}
+    if(!loaded){R.bpa={status:'error',msg:'No se pudieron descargar las regiones de los boletines (sin conexión o servicio no disponible).'};return finishBpa(silent);}
+    if(!hits.length){R.bpa={status:'none',msg:'Este punto no está dentro de ninguna región con boletín de la EAWS (Europa). Consulta el servicio de predicción local.'};return finishBpa(silent);}
+    const names=await regionNames();const dates=bpaDates();let net=0,tried=0;
+    for(const date of dates){
+      for(const hit of hits){
+        for(const prov of providersFor(hit.id)){
+          tried++;const f=await bulletinFile(prov,date);if(f.netFail){net++;continue;}if(!f.json)continue;
+          const bs=f.json.bulletins||[];
+          const b=bs.find(x=>(x.regions||[]).some(r=>r.regionID===hit.id))||bs.find(x=>(x.regions||[]).some(r=>hit.id.startsWith(r.regionID+'-')));
+          if(!b)continue;
+          const parsed=parseBulletin(b,hit.id);
+          if(!parsed)continue;
+          const parent=hit.id.split('-').slice(0,2).join('-');
+          R.bpa={status:'ok',regionID:hit.id,name:names[hit.id]||hit.id,parentName:names[prov]||names[parent]||prov,provider:prov,date,wanted:S.plan.date,url:f.url,feature:hit.feature,...parsed};
+          applyBpa();return finishBpa(silent);
+        }
+      }
+    }
+    const h0=hits[0];
+    R.bpa={status:'none',regionID:h0.id,name:names[h0.id]||h0.id,feature:h0.feature,
+      msg:net&&net===tried?'Se ha localizado la región, pero no se pudo descargar el boletín (conexión bloqueada).':`No hay boletín publicado para ${dates.join(' ni ')} en esta región: fuera de temporada o todavía no emitido (suelen publicarse por la tarde, para el día siguiente).`};
+    return finishBpa(silent);
+  }catch(e){R.bpa={status:'error',msg:'Error buscando el boletín: '+e.message};return finishBpa(silent);}
+}
+function finishBpa(silent){
+  if(bpaLayer){map.removeLayer(bpaLayer);bpaLayer=null;}
+  const f=R.bpa?.feature;if(f){try{bpaLayer=L.geoJSON(f,{style:{color:'#7950f2',weight:2,fill:true,fillOpacity:.03,dashArray:'5 6'},interactive:false}).addTo(map);}catch(e){}}
+  renderBpa();
+  if(!silent){if(R.bpa.status==='ok')toast(`Boletín aplicado: ${R.bpa.name}`);else toast(R.bpa.msg,6000);}
+}
+function applyBpa(){
+  const b=R.bpa;if(!b||b.status!=='ok')return;
+  S.bulletin.hi=b.hi;S.bulletin.lo=b.lo;if(b.thr!=null)S.bulletin.thr=b.thr;
+  Object.keys(S.bulletin.problems).forEach(k=>{S.bulletin.problems[k]={on:false,aspects:[],min:0,max:5000};});
+  Object.entries(b.problems).forEach(([k,p])=>{if(S.bulletin.problems[k])S.bulletin.problems[k]={on:true,aspects:p.aspects.slice(),min:p.min,max:p.max};});
+  S.bulletin.source={regionID:b.regionID,date:b.date};
+  save();clearTimeout(critT);critT=setTimeout(()=>{if(map.hasLayer(layers.crit))layers.crit.redraw();},250);
+}
+const BPA_OFFICIAL=[['FR','https://meteofrance.com/meteo-montagne'],['CH','https://www.slf.ch/'],['ES-CT-L','https://lauegi.report/'],['ES-CT','https://www.icgc.cat/'],['ES','https://www.aemet.es/es/eltiempo/prediccion/montana/boletin_peligro_aludes'],['AD','https://www.meteo.ad/'],['IT-32','https://avalanche.report/'],['AT-07','https://avalanche.report/']];
+function officialLink(prov){const m=BPA_OFFICIAL.find(([p])=>prov&&prov.startsWith(p));return m?m[1]:'https://www.avalanches.org/';}
+function dangerBadge(v,label){return `<span style="display:inline-flex;align-items:center;gap:6px;margin-right:10px"><span style="display:inline-grid;place-items:center;width:28px;height:28px;border-radius:6px;background:${LVL_COL[v]};color:${v>=4?'#fff':'#000'};font-family:'JetBrains Mono';font-weight:800">${v}</span><span class="small">${label}</span></span>`;}
+function renderBpa(){
+  const el=$('#bpaCard');if(!el)return;const b=R.bpa;
+  const auto=`<label class="check" style="border:0;padding:4px 0 0"><input type="checkbox" id="bpaAuto" ${S.autoBpa!==false?'checked':''}><div>Buscar y aplicar el boletín automáticamente al analizar una ruta o zona</div></label>`;
+  const btn=`<button class="btn small" id="bpaFind">Buscar boletín aquí</button>`;
+  let body='';
+  if(!b)body=`<div class="small muted">Analiza una ruta o una zona (o pulsa el botón) y localizaré la microrregión de la EAWS para descargar su boletín oficial.</div>`;
+  else if(b.status==='loading')body=`<div class="small muted row"><span class="spin" style="width:14px;height:14px;border-width:2px"></span> Localizando región y descargando el boletín…</div>`;
+  else if(b.status!=='ok')body=`${b.name?`<div style="font-weight:700">${esc(b.name)} <span class="muted small mono">${esc(b.regionID||'')}</span></div>`:''}<div class="small" style="color:var(--warn);margin-top:4px">${esc(b.msg)}</div>`;
+  else{
+    const tl=b.thr!=null&&b.hi!==b.lo;
+    const old=b.date!==b.wanted;
+    const vt=b.valid?`${new Date(b.valid.startTime).toLocaleString('es-ES',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} → ${new Date(b.valid.endTime).toLocaleString('es-ES',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`:b.date;
+    body=`<div style="font-family:Archivo;font-weight:800;font-size:15px">${esc(b.name)}</div>
+      <div class="small muted">${esc(b.regionID)} · ${esc(b.providerName||b.parentName)} · válido ${esc(vt)}</div>
+      ${old?`<div class="small" style="color:var(--warn);font-weight:600;margin-top:4px">El boletín para el ${esc(b.wanted)} aún no está publicado: se muestra el del ${esc(b.date)}. Vuelve a consultarlo la tarde anterior a la salida.</div>`:''}
+      <div style="margin:10px 0 6px">${tl?dangerBadge(b.hi,`por encima de ${fmt(b.thr)} m`)+dangerBadge(b.lo,`por debajo`):dangerBadge(b.hi,LVL_TXT[b.hi][0]+' · todas las cotas')}</div>
+      ${b.periods.size?`<div class="small" style="color:var(--warn)">El nivel cambia a lo largo del día (${[...b.periods].map(p=>p==='earlier'?'mañana':'tarde').join(' / ')}): se aplica el más alto.</div>`:''}
+      ${b.treeline?`<div class="small muted">Cota «límite del bosque» aproximada a 2.000 m.</div>`:''}
+      <div style="margin-top:6px">${Object.entries(b.problems).map(([k,p])=>`<span class="pill" style="margin:2px 4px 2px 0;background:#fff;border:1px solid var(--line)"><span style="width:8px;height:8px;border-radius:2px;background:${PROBS[k].c}"></span>${PROBS[k].n} · ${p.aspects.sort((a,c)=>a-c).map(i=>ASP[i]).join(' ')} · ${p.min>0?fmt(p.min):'0'}–${p.max>=5000?'∞':fmt(p.max)} m</span>`).join('')||'<span class="small muted">Sin problemas de aludes estructurados en el boletín.</span>'}</div>
+      ${b.texts.length?`<details style="margin-top:10px" open><summary class="small" style="cursor:pointer;font-weight:700">Texto del boletín</summary><div class="small" style="line-height:1.55;color:var(--ink2);margin-top:6px;max-height:340px;overflow:auto">${b.texts.map(([t,s])=>`${t?`<div style="font-weight:700;color:var(--ink);margin-top:8px">${t}</div>`:''}<div>${s}</div>`).join('')}</div></details>`:''}
+      <div class="links" style="margin-top:8px"><a href="${esc(b.website||officialLink(b.provider))}" target="_blank" rel="noopener">Boletín oficial ↗</a><a href="https://www.avalanches.org/" target="_blank" rel="noopener">Mapa EAWS ↗</a></div>
+      <div class="small muted" style="margin-top:6px">Aplicado al análisis. Puedes ajustar niveles y problemas abajo; si cambias de zona se volverá a buscar.</div>`;
+  }
+  el.innerHTML=`<h3>Boletín oficial de la zona <span class="tag">EAWS</span></h3>${body}<div class="row" style="margin-top:8px">${btn}${b&&b.status==='ok'?'<button class="btn small" id="bpaApply">Reaplicar boletín</button>':''}</div>${auto}`;
+  $('#bpaFind').onclick=()=>{const [lat,lon]=meteoPoint();autoBulletin(lat,lon,false).then(()=>changed());};
+  const ap=$('#bpaApply');if(ap)ap.onclick=()=>{applyBpa();changed();toast('Boletín reaplicado');};
+  $('#bpaAuto').onchange=e=>{S.autoBpa=e.target.checked;save();};
+  const zl=$('#zoneBpa');if(zl)zl.innerHTML=bpaLine();
+}
+function bpaLine(){const b=R.bpa;if(!b)return '';if(b.status==='loading')return '<span class="muted">Buscando boletín…</span>';
+  if(b.status!=='ok')return `<span style="color:var(--warn)">Boletín: ${esc(b.msg)}</span>`;
+  return `Boletín <b>${esc(b.name)}</b> (${esc(b.date)}): nivel <b>${b.hi}</b>${b.hi!==b.lo?` / <b>${b.lo}</b> (cambio a ${fmt(b.thr)} m)`:''}${Object.keys(b.problems).length?' · '+Object.keys(b.problems).map(k=>PROBS[k].n).join(', '):''}. <a href="#" onclick="showTab('cond');return false">Ver boletín</a>`;}
 
 /* ---------------- Render: tabs ---------------- */
 function showTab(t){$$('#tabs button').forEach(b=>b.classList.toggle('active',b.dataset.t===t));$$('.pane').forEach(p=>p.classList.toggle('active',p.id==='pane-'+t));}
@@ -1015,6 +1181,7 @@ function renderZone(){
   const top=z.rose.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).filter(x=>x[0]>0);
   $('#zoneFull').innerHTML=`
   <div class="row" style="justify-content:space-between;margin-bottom:10px"><div><div style="font-family:Archivo;font-weight:800;font-size:16px">${esc(z.name)}</div><div class="small muted">${fmt(z.kmx,1)} × ${fmt(z.kmy,1)} km · ${fmt(z.zmin)}–${fmt(z.zmax)} m</div></div><button class="btn small" id="zRe">Recalcular</button></div>
+  <div class="small" id="zoneBpa" style="background:var(--snow);border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.5">${bpaLine()||'Boletín: sin consultar'}</div>
   <div class="grid3" style="margin-bottom:12px">
     <div class="kpi"><b>${fmt(pct(z.aval))}%</b><span>Terreno ≥ 30°</span></div>
     <div class="kpi"><b>${fmt(pct(z.cls[4]+z.cls[5]))}%</b><span>Terreno ≥ 40°</span></div>
@@ -1067,7 +1234,7 @@ function renderCond(){
     d.querySelector('.pnone').onclick=()=>{p.aspects=[];changed();};
     box.appendChild(d);
   });
-  renderMeteo();
+  renderMeteo();renderBpa();
 }
 function renderMeteo(){
   const m=R.meteo,s=R.msum;if(!m){if(!$('#mBody').innerHTML)$('#mBody').innerHTML='<div class="small muted" style="padding:6px 0">Carga una ruta o analiza una zona para obtener la meteo automáticamente.</div>';return;}
@@ -1205,7 +1372,8 @@ function reportText(){
     L2.push(`Pendiente máx ${fmt(st.maxS)}° · ${fmt(st.onA*100)}% en ≥30° · ${fmt(st.exp*100)}% expuesto desde arriba · ATES estimado: ${['','simple','exigente','complejo'][st.ates]}`);
     if(R.segs.length){L2.push('\nPUNTOS CLAVE');R.segs.forEach(g=>{L2.push(`${g.n}. km ${fmt(g.d0/1000,1)}–${fmt(g.d1/1000,1)} (${localHM(g.t0)}–${localHM(g.t1)}), ${fmt(g.z0)}–${fmt(g.z1)} m, máx ${fmt(g.maxS)}°${g.asp.length?' '+g.asp.join('/'):''}${g.c>=3?' [CRÍTICO]':''}`);g.flags.forEach(f=>L2.push('   - '+f));});}}
   if(R.region){const z=R.region;L2.push(`\nZONA: ${z.name} · ${fmt(z.aval/z.tot*100)}% terreno ≥30° · ${fmt((z.cls[4]+z.cls[5])/z.tot*100)}% ≥40°${anyProblems()?` · ${fmt(z.crit/z.tot*100)}% crítico según BPA`:''}`);}
-  L2.push(`\nBOLETÍN: nivel ${S.bulletin.hi} por encima de ${fmt(S.bulletin.thr)} m, ${S.bulletin.lo} por debajo`);
+  if(R.bpa&&R.bpa.status==='ok')L2.push(`\nBOLETÍN OFICIAL: ${R.bpa.name} (${R.bpa.regionID}) · ${R.bpa.providerName||R.bpa.provider} · ${R.bpa.date}`);
+  L2.push(`BOLETÍN APLICADO: nivel ${S.bulletin.hi} por encima de ${fmt(S.bulletin.thr)} m, ${S.bulletin.lo} por debajo`);
   Object.entries(S.bulletin.problems).filter(([k,p])=>p.on).forEach(([k,p])=>L2.push(`- ${PROBS[k].n}: ${p.aspects.sort((a,b)=>a-b).map(i=>ASP[i]).join(' ')||'(sin orientaciones)'} · ${fmt(p.min)}–${fmt(p.max)} m`));
   if(R.msum&&!R.msum.out){L2.push(`\nMETEO (${fmt(S.meteoElev)} m)`);R.msum.sig.forEach(x=>L2.push('- '+x.t.replace(/<[^>]+>/g,'')));}
   L2.push(`\nMÉTODO DE REDUCCIÓN: ${rm.DP} / (${rm.rf1}×${rm.rf2}×${rm.rf3}) = ${fmt(rm.rr,2)} ${rm.blocked?'· '+rm.blocked:rm.rr<=1?'(aceptable)':'(NO aceptable)'}`);
